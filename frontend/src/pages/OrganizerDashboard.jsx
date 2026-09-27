@@ -1305,30 +1305,71 @@ const fetchConnections = async () => {
           {/* ================= CONNECTIONS ================= */}
 
           {activeSection === "connections" && (
-            <section className="crew-section">
+  <section className="crew-section">
 
-              <div className="crew-section-heading">
-                <h2>My Connections</h2>
-              </div>
+    <div className="crew-section-heading">
+      <div>
+        <h2>My Connections</h2>
+        <p>Your accepted collaboration connections.</p>
+      </div>
+    </div>
 
-              <div className="crew-empty-state">
+    {connections.length === 0 ? (
+      <div className="crew-empty-state">
+        <div className="empty-icon">♧</div>
 
-                <div className="empty-icon">
-                  ♧
-                </div>
+        <h3>No connections yet</h3>
 
-                <h3>No connections yet</h3>
+        <p>
+          Accepted collaboration connections will appear here.
+        </p>
+      </div>
+    ) : (
+      <div className="crew-people-grid">
 
-                <p>
-                  Your connected organizers and professionals
-                  will appear here.
-                </p>
+        {connections.map((connection) => (
+          <div
+            className="crew-person-card"
+            key={connection.connection_id}
+          >
 
-              </div>
+            <div className="crew-person-avatar">
+              {connection.name
+                ? connection.name
+                    .split(" ")
+                    .map((word) => word[0])
+                    .join("")
+                    .toUpperCase()
+                : "U"}
+            </div>
 
-            </section>
-          )}
+            <h3>{connection.name}</h3>
 
+            <p>Event Organizer</p>
+
+            <span>
+              📧 {connection.email}
+            </span>
+
+            <span>
+              🤝 Connected
+            </span>
+
+            <button
+  className="crew-primary-button"
+  onClick={() => handleViewProfile(connection.user_id)}
+>
+  View Profile
+</button>
+
+          </div>
+        ))}
+
+      </div>
+    )}
+
+  </section>
+)}
           {/* ================= TEAM ================= */}
 
           {activeSection === "team" && (
