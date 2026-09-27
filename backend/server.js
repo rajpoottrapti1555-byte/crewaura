@@ -7,6 +7,9 @@ import db from "./db.js";
 import authRoutes from "./routes/authRoutes.js";
 import adminRoutes from "./routes/adminRoutes.js";
 import eventRoutes from "./routes/eventRoutes.js";
+import organizerRoutes from "./routes/OrganizerRoutes.js";
+import professionalRoutes from "./routes/professionalRoutes.js";
+import connectionRoutes from "./routes/connectionRoutes.js";
 
 dotenv.config();
 
@@ -24,7 +27,17 @@ app.use("/api/events", eventRoutes);
 // Admin routes
 app.use("/api/admin", adminRoutes);
 
+//organizer routes
+app.use("/api/organizers", organizerRoutes);
+
+//professional routes
+app.use("/api/professionals", professionalRoutes);
+
+//connectionroutes
+app.use("/api/connections", connectionRoutes);
+
 // Home route
+
 app.get("/", (req, res) => {
   res.send("EventSaathi Backend is Running");
 });
