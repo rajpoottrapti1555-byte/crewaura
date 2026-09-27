@@ -158,10 +158,11 @@ function OrganizerDashboard() {
   };
 
 
-  const handleViewProfile = (name) => {
-    setMessage(`Opening profile of ${name}`);
+  const handleViewProfile = (userId) => {
+    console.log("Viewing profile:", userId);
+  
+    // Next step me yahan profile page open karenge
   };
-
   const fetchEvents = async () => {
     if (!user?.id) {
       setMessage("Organizer login information not found");
