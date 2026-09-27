@@ -6,6 +6,11 @@ function OrganizerDashboard() {
   const user = JSON.parse(localStorage.getItem("user"));
 
   const [events, setEvents] = useState([]);
+  const [organizers, setOrganizers] = useState([]);
+  const [professionals, setProfessionals] = useState([]);
+  const [connectionRequests, setConnectionRequests] = useState([]);
+  const [connections, setConnections] = useState([]);
+
 
   const [formData, setFormData] = useState({
     title: "",
@@ -71,9 +76,87 @@ function OrganizerDashboard() {
     setMessage("");
   };
 
-  const handleConnect = (name) => {
-    setMessage(`Connection request sent to ${name}`);
+  const handleConnect = async (receiverId, receiverName) => {
+    try {
+      if (!user?.id) {
+        setMessage("User login information not found");
+        return;
+      }
+      
+  
+      const response = await fetch(
+        "http://localhost:5500/api/connections/request",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            sender_id: user.id,
+            receiver_id: receiverId,
+            message: "I would like to connect with you.",
+          }),
+        }
+      );
+  
+      const data = await response.json();
+  
+      if (response.ok) {
+        setMessage(`Connection request sent to ${receiverName}`);
+      } else {
+        setMessage(data.message || "Unable to send connection request");
+      }
+    } catch (error) {
+      console.error("Connection Error:", error);
+      setMessage("Unable to connect to server");
+    }
   };
+  const handleAcceptRequest = async (requestId) => {
+    try {
+      const response = await fetch(
+        `http://localhost:5500/api/connections/${requestId}/accept`,
+        {
+          method: "PUT",
+        }
+      );
+  
+      const data = await response.json();
+  
+      if (response.ok) {
+        setMessage("Connection request accepted");
+        fetchConnectionRequests();
+      } else {
+        setMessage(data.message || "Unable to accept request");
+      }
+    } catch (error) {
+      console.error("Accept Request Error:", error);
+      setMessage("Unable to connect to server");
+    }
+  };
+  
+  const handleRejectRequest = async (requestId) => {
+    try {
+      const response = await fetch(
+        `http://localhost:5500/api/connections/${requestId}/reject`,
+        {
+          method: "PUT",
+        }
+      );
+  
+      const data = await response.json();
+  
+      if (response.ok) {
+        setMessage("Connection request rejected");
+        fetchConnectionRequests();
+      } else {
+        setMessage(data.message || "Unable to reject request");
+      }
+    } catch (error) {
+      console.error("Reject Request Error:", error);
+      setMessage("Unable to connect to server");
+    }
+  };
+
 
   const handleViewProfile = (name) => {
     setMessage(`Opening profile of ${name}`);
@@ -102,9 +185,115 @@ function OrganizerDashboard() {
       setMessage("Unable to connect to server");
     }
   };
+
+
+
+  //fetch organizers
+  const fetchOrganizers = async () => {
+    try {
+      const response = await fetch(
+        "http://localhost:5500/api/organizers"
+      );
   
+      const data = await response.json();
+  
+      console.log("Organizers:", data);
+  
+      if (response.ok) {
+        setOrganizers(data);
+      } else {
+        setMessage(data.message || "Unable to load organizers");
+      }
+    } catch (error) {
+      console.error("Fetch Organizers Error:", error);
+      setMessage("Unable to connect to server");
+    }
+  };
+
+  //fetchprofessional
+  const fetchProfessionals = async () => {
+    try {
+      const response = await fetch(
+        "http://localhost:5500/api/professionals"
+      );
+  
+      const data = await response.json();
+  
+      console.log("Professionals:", data);
+  
+      if (response.ok) {
+        setProfessionals(data);
+      } else {
+        setMessage(data.message || "Unable to load professionals");
+      }
+    } catch (error) {
+      console.error("Fetch Professionals Error:", error);
+      setMessage("Unable to connect to server");
+    }
+  };
+  //fetchconnection
+
+
+
+  const fetchConnectionRequests = async () => {
+    try {
+      if (!user?.id) {
+        return;
+      }
+  
+      const response = await fetch(
+        `http://localhost:5500/api/connections/requests/${user.id}`
+      );
+  
+      const data = await response.json();
+  
+      console.log("Connection Requests:", data);
+  
+      if (response.ok) {
+        setConnectionRequests(data);
+      } else {
+        setMessage(
+          data.message || "Unable to load connection requests"
+        );
+      }
+    } catch (error) {
+      console.error("Fetch Connection Requests Error:", error);
+      setMessage("Unable to connect to server");
+    }
+  };
+//fetch connection
+
+
+const fetchConnections = async () => {
+  try {
+    if (!user?.id) {
+      return;
+    }
+
+    const response = await fetch(
+      `http://localhost:5500/api/connections/${user.id}`
+    );
+
+    const data = await response.json();
+
+    console.log("My Connections:", data);
+
+    if (response.ok) {
+      setConnections(data);
+    } else {
+      setMessage(data.message || "Unable to load connections");
+    }
+  } catch (error) {
+    console.error("Fetch Connections Error:", error);
+    setMessage("Unable to connect to server");
+  }
+};
   useEffect(() => {
-    fetchEvents();
+    fetchEvents(); 
+    fetchOrganizers();
+    fetchProfessionals();
+    fetchConnectionRequests();
+    fetchConnections();
   }, []);
   
   const handleChange = (e) => {
@@ -801,262 +990,318 @@ function OrganizerDashboard() {
             </section>
           )}
 
-          {/* ================= MY EVENTS ================= */}
+{/* ================= MY EVENTS ================= */}
+{activeSection === "events" && (
+  <section className="crew-section">
 
-          {activeSection === "events" && (
-            <section className="crew-section">
+    <div className="crew-section-heading">
+      <h2>My Events</h2>
 
-              <div className="crew-section-heading">
-                <h2>My Events</h2>
+      <button
+        className="crew-primary-button"
+        onClick={() => showSection("createEvent")}
+      >
+        + Create Event
+      </button>
+    </div>
 
-                <button
-                  className="crew-primary-button"
-                  onClick={() =>
-                    showSection("createEvent")
-                  }
-                >
-                  + Create Event
-                </button>
-              </div>
+    {events.length === 0 ? (
+      <div className="crew-empty-state">
+        <div className="empty-icon">▤</div>
 
-              <div className="crew-event-grid">
+        <h3>No events found</h3>
 
-                <div className="crew-event-card">
-                  <div className="event-card-status">
-                    Active
-                  </div>
+        <p>
+          Events created by you will appear here.
+        </p>
+      </div>
+    ) : (
+      <div className="crew-event-grid">
 
-                  <h3>Tech Summit 2026</h3>
+        {events.map((event) => (
+          <div
+            className="crew-event-card"
+            key={event.id}
+          >
 
-                  <div className="event-info">
-                    <span>📍 Bhopal</span>
-                    <span>📅 28 September 2026</span>
-                    <span>👥 85 Workers</span>
-                  </div>
-                </div>
+            <div className="event-card-status">
+              Upcoming
+            </div>
 
-                <div className="crew-event-card">
-                  <div className="event-card-status">
-                    Active
-                  </div>
+            <h3>{event.title}</h3>
 
-                  <h3>Grand Wedding</h3>
+            <div className="event-info">
 
-                  <div className="event-info">
-                    <span>📍 Indore</span>
-                    <span>📅 30 September 2026</span>
-                    <span>👥 52 Workers</span>
-                  </div>
-                </div>
+              <span>
+                📍 {event.location || "Location not specified"}
+              </span>
 
-                <div className="crew-event-card">
-                  <div className="event-card-status">
-                    Upcoming
-                  </div>
+              <span>
+                📅 {event.event_date
+                  ? new Date(event.event_date).toLocaleDateString("en-IN", {
+                      day: "2-digit",
+                      month: "long",
+                      year: "numeric"
+                    })
+                  : "Date not specified"}
+              </span>
 
-                  <h3>Corporate Leadership Meet</h3>
+              <span>
+                👥 Workers not assigned
+              </span>
 
-                  <div className="event-info">
-                    <span>📍 Bhopal</span>
-                    <span>📅 05 October 2026</span>
-                    <span>👥 40 Workers</span>
-                  </div>
-                </div>
+            </div>
 
-              </div>
+            {event.description && (
+              <p>
+                {event.description}
+              </p>
+            )}
 
-            </section>
-          )}
+          </div>
+        ))}
 
-          {/* ================= FIND ORGANIZERS ================= */}
+      </div>
+    )}
 
-          {activeSection === "organizers" && (
-            <section className="crew-section">
+  </section>
+)}
 
-              <div className="crew-section-heading">
-                <div>
-                  <h2>Find Organizers</h2>
-                  <p>
-                    Connect with event organizers.
-                  </p>
-                </div>
-              </div>
 
-              <div className="crew-people-grid">
 
-                <div className="crew-person-card">
-                  <div className="crew-person-avatar">
-                    RS
-                  </div>
 
-                  <h3>Rahul Sharma</h3>
-                  <p>Event Organizer</p>
-                  <span>📍 Bhopal</span>
+{/* ================= FIND ORGANIZERS ================= */}
+{activeSection === "organizers" && (
+  <section className="crew-section">
 
-                  <button
-                    className="crew-primary-button"
-                    onClick={() => handleConnect("Rahul Sharma")}
-                  >
-                    Connect
-                  </button>
-                </div>
+    <div className="crew-section-heading">
+      <div>
+        <h2>Find Organizers</h2>
+        <p>
+          Connect with event organizers.
+        </p>
+      </div>
+    </div>
 
-                <div className="crew-person-card">
-                  <div className="crew-person-avatar">
-                    AM
-                  </div>
+    {organizers.length === 0 ? (
+      <div className="crew-empty-state">
+        <div className="empty-icon">♧</div>
 
-                  <h3>Ankit Mehta</h3>
-                  <p>Event Manager</p>
-                  <span>📍 Indore</span>
+        <h3>No organizers found</h3>
 
-                  <button
-                    className="crew-primary-button"
-                    onClick={() => handleConnect("Ankit Mehta")}
-                  >
-                    Connect
-                  </button>
-                </div>
+        <p>
+          Registered organizers will appear here.
+        </p>
+      </div>
+    ) : (
+      <div className="crew-people-grid">
 
-              </div>
+        {organizers.map((organizer) => (
+          <div
+            className="crew-person-card"
+            key={organizer.id}
+          >
 
-            </section>
-          )}
+            <div className="crew-person-avatar">
+              {organizer.name
+                ? organizer.name
+                    .split(" ")
+                    .map((word) => word[0])
+                    .join("")
+                    .toUpperCase()
+                : "OR"}
+            </div>
+
+            <h3>{organizer.name}</h3>
+
+            <p>
+              Event Organizer
+            </p>
+
+            <span>
+              📧 {organizer.email}
+            </span>
+
+            <button
+              className="crew-primary-button"
+              onClick={() =>
+                handleConnect(organizer.id, organizer.name)
+              }
+            >
+              Connect
+            </button>
+            
+
+          </div>
+        ))}
+
+      </div>
+    )}
+
+  </section>
+)}
 
           {/* ================= PROFESSIONALS ================= */}
 
           {activeSection === "workers" && (
-            <section className="crew-section">
+  <section className="crew-section">
 
-              <div className="crew-section-heading">
-                <div>
-                  <h2>Find Professionals</h2>
-                  <p>
-                    Find verified professionals for your events.
-                  </p>
-                </div>
-              </div>
+    <div className="crew-section-heading">
+      <div>
+        <h2>Find Professionals</h2>
+        <p>
+          Find verified professionals for your events.
+        </p>
+      </div>
+    </div>
 
-              <div className="crew-people-grid">
+    {professionals.length === 0 ? (
+      <div className="crew-empty-state">
+        <div className="empty-icon">♧</div>
 
-                <div className="crew-person-card">
+        <h3>No professionals found</h3>
 
-                  <div className="crew-person-avatar">
-                    AR
-                  </div>
+        <p>
+          Registered professionals will appear here.
+        </p>
+      </div>
+    ) : (
+      <div className="crew-people-grid">
 
-                  <h3>Aarav Rao</h3>
+        {professionals.map((professional) => (
+          <div
+            className="crew-person-card"
+            key={professional.id}
+          >
 
-                  <p>
-                    Event Coordinator
-                  </p>
+            <div className="crew-person-avatar">
+              {professional.name
+                ? professional.name
+                    .split(" ")
+                    .map((word) => word[0])
+                    .join("")
+                    .toUpperCase()
+                : "PR"}
+            </div>
 
-                  <span>
-                    📍 Bhopal
-                  </span>
+            <h3>{professional.name}</h3>
 
-                  <div className="crew-rating">
-                    ★ 4.8
-                  </div>
+            <p>
+              Event Professional
+            </p>
 
-                  <button
-                    className="crew-primary-button"
-                    onClick={() => handleViewProfile("Aarav Rao")}
-                  >
-                    View Profile
-                  </button>
+            <span>
+              📧 {professional.email}
+            </span>
 
-                </div>
+            <div className="crew-rating">
+              ★ Profile
+            </div>
 
-                <div className="crew-person-card">
+            <button
+              className="crew-primary-button"
+              onClick={() =>
+                handleViewProfile(professional.name)
+              }
+            >
+              View Profile
+            </button>
 
-                  <div className="crew-person-avatar">
-                    NS
-                  </div>
+          </div>
+        ))}
 
-                  <h3>Neha Singh</h3>
+      </div>
+    )}
 
-                  <p>
-                    Hospitality Professional
-                  </p>
-
-                  <span>
-                    📍 Indore
-                  </span>
-
-                  <div className="crew-rating">
-                    ★ 4.7
-                  </div>
-
-                  <button
-                    className="crew-primary-button"
-                    onClick={() => handleViewProfile("Neha Singh")}
-                  >
-                    View Profile
-                  </button>
-
-                </div>
-
-                <div className="crew-person-card">
-
-                  <div className="crew-person-avatar">
-                    RV
-                  </div>
-
-                  <h3>Rahul Verma</h3>
-
-                  <p>
-                    AV Technician
-                  </p>
-
-                  <span>
-                    📍 Bhopal
-                  </span>
-
-                  <div className="crew-rating">
-                    ★ 4.9
-                  </div>
-
-                  <button
-                    className="crew-primary-button"
-                    onClick={() => handleViewProfile("Rahul Verma")}
-                  >
-                    View Profile
-                  </button>
-
-                </div>
-
-              </div>
-
-            </section>
-          )}
-
+  </section>
+)}
           {/* ================= REQUESTS ================= */}
 
           {activeSection === "requests" && (
-            <section className="crew-section">
+  <section className="crew-section">
 
-              <div className="crew-section-heading">
-                <h2>Connection Requests</h2>
-              </div>
+    <div className="crew-section-heading">
+      <div>
+        <h2>Connection Requests</h2>
+        <p>
+          Manage collaboration requests from organizers.
+        </p>
+      </div>
+    </div>
 
-              <div className="crew-empty-state">
+    {connectionRequests.length === 0 ? (
+      <div className="crew-empty-state">
+        <div className="empty-icon">♧</div>
 
-                <div className="empty-icon">
-                  ♧
-                </div>
+        <h3>No connection requests</h3>
 
-                <h3>No connection requests</h3>
+        <p>
+          New collaboration requests will appear here.
+        </p>
+      </div>
+    ) : (
+      <div className="crew-people-grid">
 
-                <p>
-                  New connection requests will appear here.
-                </p>
+        {connectionRequests.map((request) => (
+          <div
+            className="crew-person-card"
+            key={request.id}
+          >
 
-              </div>
+            <div className="crew-person-avatar">
+              {request.sender_name
+                ? request.sender_name
+                    .split(" ")
+                    .map((word) => word[0])
+                    .join("")
+                    .toUpperCase()
+                : "OR"}
+            </div>
 
-            </section>
-          )}
+            <h3>{request.sender_name}</h3>
 
+            <p>
+              Event Organizer
+            </p>
+
+            <span>
+              📧 {request.sender_email}
+            </span>
+
+            <span>
+              📅 {new Date(request.created_at).toLocaleDateString()}
+            </span>
+
+            <div className="crew-request-actions">
+
+              <button
+                className="crew-primary-button"
+                onClick={() =>
+                  handleAcceptRequest(request.id)
+                }
+              >
+                Accept
+              </button>
+
+              <button
+                className="crew-secondary-button"
+                onClick={() =>
+                  handleRejectRequest(request.id)
+                }
+              >
+                Reject
+              </button>
+
+            </div>
+
+          </div>
+        ))}
+
+      </div>
+    )}
+
+  </section>
+)}
           {/* ================= CONNECTIONS ================= */}
 
           {activeSection === "connections" && (
