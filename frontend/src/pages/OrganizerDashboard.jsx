@@ -118,17 +118,14 @@ function OrganizerDashboard() {
 
 
   const handleProfessionalSelection = (professionalId) => {
-    setSelectedProfessionals((prev) => {
-      if (prev.includes(professionalId)) {
-        return prev.filter((id) => id !== professionalId);
-      }
-  
-      return [...prev, professionalId];
-    });
-  };
+  setSelectedProfessionals((prev) => {
+    if (prev.includes(professionalId)) {
+      return prev.filter((id) => id !== professionalId);
+    }
 
-
-
+    return [...prev, professionalId];
+  });
+};
   const handleAcceptRequest = async (requestId) => {
     try {
       const response = await fetch(
@@ -1000,56 +997,59 @@ const fetchConnections = async () => {
 
                 </div>
 
+                {/* SELECTED TEAM */}
+        <div className="crew-form-group crew-full-width">
 
-                <div className="crew-form-group crew-full-width">
-  <label>Select Professionals for This Event</label>
+          <h3>Selected Team</h3>
 
-  {professionals.length === 0 ? (
-    <p>No professionals available.</p>
-  ) : (
-    <div className="crew-people-grid">
-      {professionals.map((professional) => (
-        <div
-          className="crew-person-card"
-          key={professional.id}
-        >
-          <div className="crew-person-avatar">
-            {professional.name
-              ? professional.name
-                  .split(" ")
-                  .map((word) => word[0])
-                  .join("")
-                  .toUpperCase()
-              : "PR"}
+          <p>Select professionals for this event.</p>
+
+          <div className="crew-people-grid">
+
+            {professionals.map((professional) => (
+              <div
+                className="crew-person-card"
+                key={professional.id}
+              >
+
+                <div className="crew-person-avatar">
+                  {professional.name
+                    ? professional.name
+                        .split(" ")
+                        .map((word) => word[0])
+                        .join("")
+                        .toUpperCase()
+                    : "PR"}
+                </div>
+
+                <h3>{professional.name}</h3>
+
+                <p>Event Professional</p>
+
+                <span>📧 {professional.email}</span>
+
+                <label>
+                  <input
+                    type="checkbox"
+                    checked={selectedProfessionals.includes(
+                      professional.id
+                    )}
+                    onChange={() =>
+                      handleProfessionalSelection(
+                        professional.id
+                      )
+                    }
+                  />
+
+                  Select for this event
+                </label>
+
+              </div>
+            ))}
+
           </div>
 
-          <h3>{professional.name}</h3>
-
-          <p>Event Professional</p>
-
-          <span>📧 {professional.email}</span>
-
-          <label>
-            <input
-              type="checkbox"
-              checked={selectedProfessionals.includes(
-                professional.id
-              )}
-              onChange={() =>
-                handleProfessionalSelection(
-                  professional.id
-                )
-              }
-            />
-
-            Select for this event
-          </label>
         </div>
-      ))}
-    </div>
-  )}
-</div>
-
                 <button className="crew-primary-button">
                   Create Event
                 </button>
@@ -1059,13 +1059,6 @@ const fetchConnections = async () => {
             </section>
           )}
 
-<textarea
-  name="description"
-  value={formData.description}
-  onChange={handleChange}
-  placeholder="Describe your event..."
-  rows="6"
-></textarea>
 {/* ================= MY EVENTS ================= */}
 {activeSection === "events" && (
   <section className="crew-section">
@@ -1448,42 +1441,31 @@ const fetchConnections = async () => {
 )}
           {/* ================= TEAM ================= */}
 
-         <div className="crew-people-grid">
-  {professionals.map((professional) => (
-    <div
-      className="crew-person-card"
-      key={professional.id}
-    >
-      <div className="crew-person-avatar">
-        {professional.name
-          ? professional.name
-              .split(" ")
-              .map((word) => word[0])
-              .join("")
-              .toUpperCase()
-          : "PR"}
-      </div>
+          {activeSection === "team" && (
+            <section className="crew-section">
 
-      <h3>{professional.name}</h3>
+              <div className="crew-section-heading">
+                <h2>Selected Team</h2>
+              </div>
 
-      <p>Event Professional</p>
+              <div className="crew-empty-state">
 
-      <span>📧 {professional.email}</span>
+                <div className="empty-icon">
+                  ♟
+                </div>
 
-      <label>
-        <input
-          type="checkbox"
-          checked={selectedProfessionals.includes(professional.id)}
-          onChange={() =>
-            handleProfessionalSelection(professional.id)
-          }
-        />
+                <h3>No team members selected</h3>
 
-        Select for Event
-      </label>
-    </div>
-  ))}
-</div>
+                <p>
+                  Professionals selected for your events
+                  will appear here.
+                </p>
+
+              </div>
+
+            </section>
+          )}
+
           {/* ================= MESSAGES ================= */}
 
           {activeSection === "chat" && (
