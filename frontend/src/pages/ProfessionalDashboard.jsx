@@ -1,60 +1,154 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 function ProfessionalDashboard() {
   const [activeSection, setActiveSection] = useState("dashboard");
 
-  const [offers, setOffers] = useState([
-    {
-      id: 1,
-      event: "Wedding Celebration",
-      organizer: "Priya Events & Management",
-      location: "Bhopal",
-      date: "15 October 2026",
-      role: "Event Staff",
-      status: "Pending",
-    },
-    {
-      id: 2,
-      event: "Corporate Annual Meet",
-      organizer: "Royal Events",
-      location: "Indore",
-      date: "22 October 2026",
-      role: "Event Coordinator",
-      status: "Pending",
-    },
-  ]);
+  const [offers, setOffers] = useState([]);
 
-  const [connections, setConnections] = useState([
-    {
-      id: 1,
-      name: "Priya Sharma",
-      company: "Priya Events & Management",
-      location: "Bhopal",
-    },
-    {
-      id: 2,
-      name: "Rohan Mehta",
-      company: "Royal Events",
-      location: "Indore",
-    },
-  ]);
+  const [connections, setConnections] = useState([]);
+  useEffect(() => {
+  const loadProfessionalData = async () => {
+    try {
+      const storedUser = JSON.parse(localStorage.getItem("user"));
 
-  const [profile] = useState({
-    name: "Professional User",
-    email: "professional@example.com",
-    phone: "+91 9876543210",
-    skill: "Event Management",
-    experience: "2 Years",
-    location: "Bhopal",
-  });
+      if (!storedUser || !storedUser.id) {
+        console.error("Professional user not found");
+        return;
+      }
 
-  const handleOffer = (id, status) => {
+      const userId = storedUser.id;
+
+      // Get professional profile
+      const profileResponse = await fetch(
+        `http://localhost:5500/api/professionals/profile/${userId}`
+      );
+
+      if (profileResponse.ok) {
+        const profileData = await profileResponse.json();
+
+        setProfile({
+          name: profileData.name || "",
+          email: profileData.email || "",
+          phone: profileData.phone || "",
+          skill: profileData.skills || "",
+          experience: profileData.experience_years
+            ? `${profileData.experience_years} Years`
+            : "0 Years",
+          location: profileData.city || "",
+        });
+      }
+
+      // Get accepted connections
+      const connectionsResponse = await fetch(
+        `http://localhost:5500/api/professionals/${userId}/connections`
+      );
+
+      if (connectionsResponse.ok) {
+        const connectionsData = await connectionsResponse.json();
+
+        setConnections(
+          connectionsData.map((connection) => ({
+            id: connection.connection_id,
+            name: connection.name,
+            company: connection.name,
+            location: "",
+          }))
+        );
+      }
+
+      // Get event offers
+      const offersResponse = await fetch(
+        `http://localhost:5500/api/professionals/${userId}/event-offers`
+      );
+
+      if (offersResponse.ok) {
+        const offersData = await offersResponse.json();
+
+        setOffers(
+          offersData.map((offer) => ({
+            id: offer.staff_id,
+            event: offer.title,
+            organizer:
+              offer.organization_name || offer.organizer_name,
+            location: offer.location || "",
+            date: offer.event_date
+              ? new Date(offer.event_date).toLocaleDateString("en-IN", {
+                  day: "numeric",
+                  month: "long",
+                  year: "numeric",
+                })
+              : "",
+            role: offer.professional_role || "Event Staff",
+            status:
+              offer.offer_status === "confirmed"
+                ? "Accepted"
+                : offer.offer_status === "rejected"
+                ? "Rejected"
+                : "Pending",
+          }))
+        );
+      }
+
+      // Get upcoming events
+      const upcomingResponse = await fetch(
+        `http://localhost:5500/api/professionals/${userId}/upcoming-events`
+      );
+
+      if (upcomingResponse.ok) {
+        const upcomingData = await upcomingResponse.json();
+
+        console.log("Upcoming Events:", upcomingData);
+      }
+    } catch (error) {
+      console.error("Error loading professional data:", error);
+    }
+  };
+
+  loadProfessionalData();
+}, []);
+
+ const [profile, setProfile] = useState({
+  name: "",
+  email: "",
+  phone: "",
+  skill: "",
+  experience: "",
+  location: "",
+});
+
+ const handleOffer = async (id, status) => {
+  try {
+    const action = status === "Accepted" ? "accept" : "reject";
+
+    const response = await fetch(
+      `http://localhost:5500/api/professionals/event-offers/${id}/${action}`,
+      {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+        },
+      }
+    );
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      alert(data.message || "Unable to update event offer");
+      return;
+    }
+
     setOffers((previousOffers) =>
       previousOffers.map((offer) =>
-        offer.id === id ? { ...offer, status } : offer
+        offer.id === id
+          ? { ...offer, status }
+          : offer
       )
     );
-  };
+  } catch (error) {
+    console.error("Offer update error:", error);
+    alert("Unable to connect to server");
+  }
+};
 
   const renderSection = () => {
     switch (activeSection) {
