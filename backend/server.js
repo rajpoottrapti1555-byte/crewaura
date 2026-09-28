@@ -2,8 +2,6 @@ import express from "express";
 import cors from "cors";
 import dotenv from "dotenv";
 
-import db from "./db.js";
-
 import authRoutes from "./routes/authRoutes.js";
 import adminRoutes from "./routes/adminRoutes.js";
 import eventRoutes from "./routes/eventRoutes.js";
@@ -18,30 +16,46 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
-// Authentication routes
+// ===============================
+// AUTHENTICATION ROUTES
+// ===============================
 app.use("/api/auth", authRoutes);
 
-// Event routes
+// ===============================
+// EVENT ROUTES
+// ===============================
 app.use("/api/events", eventRoutes);
 
-// Admin routes
+// ===============================
+// ADMIN ROUTES
+// ===============================
 app.use("/api/admin", adminRoutes);
 
-//organizer routes
+// ===============================
+// ORGANIZER ROUTES
+// ===============================
 app.use("/api/organizers", OrganizerRoutes);
 
-//professional routes
+// ===============================
+// PROFESSIONAL ROUTES
+// ===============================
 app.use("/api/professionals", professionalRoutes);
 
-//connectionroutes
+// ===============================
+// CONNECTION ROUTES
+// ===============================
 app.use("/api/connections", connectionRoutes);
 
-// Home route
-
+// ===============================
+// HOME ROUTE
+// ===============================
 app.get("/", (req, res) => {
   res.send("EventSaathi Backend is Running");
 });
 
+// ===============================
+// SERVER
+// ===============================
 const PORT = process.env.PORT || 5500;
 
 app.listen(PORT, () => {
