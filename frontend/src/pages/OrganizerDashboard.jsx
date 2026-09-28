@@ -8,6 +8,7 @@ function OrganizerDashboard() {
   const [events, setEvents] = useState([]);
   const [organizers, setOrganizers] = useState([]);
   const [professionals, setProfessionals] = useState([]);
+  const [selectedProfessionals, setSelectedProfessionals] = useState([]);
   const [connectionRequests, setConnectionRequests] = useState([]);
   const [connections, setConnections] = useState([]);
 
@@ -111,6 +112,23 @@ function OrganizerDashboard() {
       setMessage("Unable to connect to server");
     }
   };
+
+
+
+
+
+  const handleProfessionalSelection = (professionalId) => {
+    setSelectedProfessionals((prev) => {
+      if (prev.includes(professionalId)) {
+        return prev.filter((id) => id !== professionalId);
+      }
+  
+      return [...prev, professionalId];
+    });
+  };
+
+
+
   const handleAcceptRequest = async (requestId) => {
     try {
       const response = await fetch(
@@ -1373,31 +1391,42 @@ const fetchConnections = async () => {
 )}
           {/* ================= TEAM ================= */}
 
-          {activeSection === "team" && (
-            <section className="crew-section">
+         <div className="crew-people-grid">
+  {professionals.map((professional) => (
+    <div
+      className="crew-person-card"
+      key={professional.id}
+    >
+      <div className="crew-person-avatar">
+        {professional.name
+          ? professional.name
+              .split(" ")
+              .map((word) => word[0])
+              .join("")
+              .toUpperCase()
+          : "PR"}
+      </div>
 
-              <div className="crew-section-heading">
-                <h2>Selected Team</h2>
-              </div>
+      <h3>{professional.name}</h3>
 
-              <div className="crew-empty-state">
+      <p>Event Professional</p>
 
-                <div className="empty-icon">
-                  ♟
-                </div>
+      <span>📧 {professional.email}</span>
 
-                <h3>No team members selected</h3>
+      <label>
+        <input
+          type="checkbox"
+          checked={selectedProfessionals.includes(professional.id)}
+          onChange={() =>
+            handleProfessionalSelection(professional.id)
+          }
+        />
 
-                <p>
-                  Professionals selected for your events
-                  will appear here.
-                </p>
-
-              </div>
-
-            </section>
-          )}
-
+        Select for Event
+      </label>
+    </div>
+  ))}
+</div>
           {/* ================= MESSAGES ================= */}
 
           {activeSection === "chat" && (
