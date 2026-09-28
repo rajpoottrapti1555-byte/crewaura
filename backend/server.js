@@ -7,7 +7,7 @@ import db from "./db.js";
 import authRoutes from "./routes/authRoutes.js";
 import adminRoutes from "./routes/adminRoutes.js";
 import eventRoutes from "./routes/eventRoutes.js";
-import organizerRoutes from "./routes/OrganizerRoutes.js";
+import OrganizerRoutes from "./routes/OrganizerRoutes.js";
 import professionalRoutes from "./routes/professionalRoutes.js";
 import connectionRoutes from "./routes/connectionRoutes.js";
 
@@ -28,7 +28,7 @@ app.use("/api/events", eventRoutes);
 app.use("/api/admin", adminRoutes);
 
 //organizer routes
-app.use("/api/organizers", organizerRoutes);
+app.use("/api/organizers", OrganizerRoutes);
 
 //professional routes
 app.use("/api/professionals", professionalRoutes);
