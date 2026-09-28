@@ -58,7 +58,7 @@ function Register() {
       <div className="auth-box">
 
         <h1>Create Account</h1>
-        <p>Join EventSaathi</p>
+        <p>Join CrewAura</p>
 
         <form onSubmit={handleSubmit}>
 

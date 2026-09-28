@@ -77,7 +77,7 @@ function Login() {
       <div className="auth-box">
 
         <h1>Welcome Back</h1>
-        <p>Login to your EventSaathi account</p>
+        <p>Login to your CrewAura account</p>
 
         <form onSubmit={handleSubmit}>
 
