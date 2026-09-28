@@ -1604,85 +1604,94 @@ const updateAttendance = async (eventId, professionalId, status) => {
           {/* ================= ATTENDANCE ================= */}
 
           {activeSection === "attendance" && (
-            <section className="crew-section">
+  <section className="crew-section">
+    <h2>Event Attendance</h2>
 
-              <div className="crew-stats-grid">
+    <div className="crew-event-grid">
+      {events.length === 0 ? (
+        <p>No events available.</p>
+      ) : (
+        events.map((event) => (
+          <div className="crew-form-card" key={event.id}>
+            <h3>{event.title}</h3>
 
-                <div className="crew-stat-card">
-                  <div>
-                    <span>Assigned</span>
-                    <strong>85</strong>
-                  </div>
-                </div>
+            <p>
+              <strong>Date:</strong> {event.event_date}
+            </p>
 
-                <div className="crew-stat-card">
-                  <div>
-                    <span>Present</span>
-                    <strong>78</strong>
-                  </div>
-                </div>
+            <p>
+              <strong>Location:</strong>{" "}
+              {event.location || "Not specified"}
+            </p>
 
-                <div className="crew-stat-card">
-                  <div>
-                    <span>Absent</span>
-                    <strong>4</strong>
-                  </div>
-                </div>
+            <button
+              className="crew-primary-button"
+              onClick={() => fetchEventAttendance(event.id)}
+            >
+              View Attendance
+            </button>
+          </div>
+        ))
+      )}
+    </div>
 
-                <div className="crew-stat-card">
-                  <div>
-                    <span>Late</span>
-                    <strong>3</strong>
-                  </div>
-                </div>
+    {selectedAttendanceEvent && (
+      <div className="crew-form-card">
+        <h3>Attendance</h3>
 
-              </div>
+        {eventAttendance.length === 0 ? (
+          <p>No professionals assigned to this event.</p>
+        ) : (
+          eventAttendance.map((person) => (
+            <div
+              key={person.id}
+              className="crew-person-card"
+            >
+              <h3>{person.name}</h3>
 
-              <div className="crew-table-card">
+              <p>{person.email}</p>
 
-                <table>
+              <p>
+                Status: <strong>{person.status}</strong>
+              </p>
 
-                  <thead>
-                    <tr>
-                      <th>Professional</th>
-                      <th>Role</th>
-                      <th>Attendance</th>
-                      <th>Check-in</th>
-                    </tr>
-                  </thead>
+              <p>
+                Check In:{" "}
+                {person.check_in
+                  ? new Date(person.check_in).toLocaleString()
+                  : "Not checked in"}
+              </p>
 
-                  <tbody>
+              <button
+                onClick={() =>
+                  updateAttendance(
+                    person.event_id,
+                    person.professional_id,
+                    "present"
+                  )
+                }
+              >
+                Present
+              </button>
 
-                    <tr>
-                      <td>Aarav Rao</td>
-                      <td>Event Coordinator</td>
-                      <td>
-                        <span className="crew-status">
-                          Present
-                        </span>
-                      </td>
-                      <td>08:45 AM</td>
-                    </tr>
-
-                    <tr>
-                      <td>Neha Singh</td>
-                      <td>Hospitality</td>
-                      <td>
-                        <span className="crew-status late">
-                          Late
-                        </span>
-                      </td>
-                      <td>09:20 AM</td>
-                    </tr>
-
-                  </tbody>
-
-                </table>
-
-              </div>
-
-            </section>
-          )}
+              <button
+                onClick={() =>
+                  updateAttendance(
+                    person.event_id,
+                    person.professional_id,
+                    "absent"
+                  )
+                }
+              >
+                Absent
+              </button>
+            </div>
+          ))
+        )}
+      </div>
+    )}
+  </section>
+)}
 
           {/* ================= PAYMENTS ================= */}
 
