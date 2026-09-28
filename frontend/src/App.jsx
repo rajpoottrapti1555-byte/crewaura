@@ -6,6 +6,7 @@ import Register from "./pages/Register";
 import AdminDashboard from "./pages/AdminDashboard";
 import OrganizerDashboard from "./pages/OrganizerDashboard";
 import ProfessionalProfile from "./pages/ProfessionalProfile";
+import ProfessionalDashboard from "./pages/ProfessionalDashboard";
 
 function App() {
   return (
@@ -20,6 +21,8 @@ function App() {
         <Route path="/admin" element={<AdminDashboard />} />
 
         <Route path="/organizer" element={<OrganizerDashboard />} />
+
+<Route path="/professional" element={<ProfessionalDashboard />} />
 
         <Route
           path="/professional-profile"
