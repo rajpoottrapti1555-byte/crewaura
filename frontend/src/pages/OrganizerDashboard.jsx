@@ -1000,6 +1000,56 @@ const fetchConnections = async () => {
 
                 </div>
 
+
+                <div className="crew-form-group crew-full-width">
+  <label>Select Professionals for This Event</label>
+
+  {professionals.length === 0 ? (
+    <p>No professionals available.</p>
+  ) : (
+    <div className="crew-people-grid">
+      {professionals.map((professional) => (
+        <div
+          className="crew-person-card"
+          key={professional.id}
+        >
+          <div className="crew-person-avatar">
+            {professional.name
+              ? professional.name
+                  .split(" ")
+                  .map((word) => word[0])
+                  .join("")
+                  .toUpperCase()
+              : "PR"}
+          </div>
+
+          <h3>{professional.name}</h3>
+
+          <p>Event Professional</p>
+
+          <span>📧 {professional.email}</span>
+
+          <label>
+            <input
+              type="checkbox"
+              checked={selectedProfessionals.includes(
+                professional.id
+              )}
+              onChange={() =>
+                handleProfessionalSelection(
+                  professional.id
+                )
+              }
+            />
+
+            Select for this event
+          </label>
+        </div>
+      ))}
+    </div>
+  )}
+</div>
+
                 <button className="crew-primary-button">
                   Create Event
                 </button>
@@ -1009,6 +1059,13 @@ const fetchConnections = async () => {
             </section>
           )}
 
+<textarea
+  name="description"
+  value={formData.description}
+  onChange={handleChange}
+  placeholder="Describe your event..."
+  rows="6"
+></textarea>
 {/* ================= MY EVENTS ================= */}
 {activeSection === "events" && (
   <section className="crew-section">
