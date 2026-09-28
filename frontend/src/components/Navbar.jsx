@@ -4,7 +4,7 @@ function Navbar() {
   return (
     <nav className="navbar">
       <div className="logo">
-        <Link to="/">EventSaathi</Link>
+        <Link to="/">CrewAura</Link>
       </div>
 
       <div className="nav-links">
