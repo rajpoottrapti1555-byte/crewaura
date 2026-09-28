@@ -143,150 +143,179 @@ function ProfessionalDashboard() {
   location: "",
 });
 
- const handleOffer = async (id, status) => {
-  try {
-    const action = status === "Accepted" ? "accept" : "reject";
+// FETCH EVENTS ASSIGNED TO PROFESSIONAL
+const fetchAssignedEvents = async () => {
+  if (!user?.id) {
+    setAttendanceMessage("Professional login information not found.");
+    return;
+  }
 
+  try {
     const response = await fetch(
-      `http://localhost:5500/api/professionals/event-offers/${id}/${action}`,
-      {
-        method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-        },
-      }
+      `http://localhost:5500/api/events/professional/${user.id}`
     );
 
     const data = await response.json();
 
-    if (!response.ok) {
-      alert(data.message || "Unable to update event offer");
-      return;
+    if (response.ok) {
+      setAssignedEvents(data);
+    } else {
+      setAttendanceMessage(
+        data.message || "Unable to load assigned events."
+      );
     }
 
-    setOffers((previousOffers) =>
-      previousOffers.map((offer) =>
-        offer.id === id
-          ? { ...offer, status }
-          : offer
-      )
-    );
   } catch (error) {
-    console.error("Offer update error:", error);
-    alert("Unable to connect to server");
+    console.error("Fetch Assigned Events Error:", error);
+
+    setAttendanceMessage(
+      "Unable to connect to server."
+    );
   }
 };
 
-  const fetchAssignedEvents = async () => {
-    if (!user?.id) {
-      return;
-    }
-  
-    try {
-      const response = await fetch(
-        `http://localhost:5500/api/events/professional/${user.id}`
-      );
-  
-      const data = await response.json();
-  
-      if (response.ok) {
-        setAssignedEvents(data);
-      } else {
-        setAttendanceMessage(
-          data.message || "Unable to load assigned events"
-        );
-      }
-    } catch (error) {
-      console.error("Fetch Assigned Events Error:", error);
-  
-      setAttendanceMessage(
-        "Unable to connect to server"
-      );
-    }
-  };
-  useEffect(() => {
-    fetchAssignedEvents();
-  }, []);
-  const markAttendance = (eventId) => {
-    if (!navigator.geolocation) {
-      setAttendanceMessage(
-        "Geolocation is not supported by your browser."
-      );
-      return;
-    }
-  
-    setAttendanceMessage("Getting your location...");
-  
-    navigator.geolocation.getCurrentPosition(
-      async (position) => {
-        try {
-          const response = await fetch(
-            `http://localhost:5500/api/events/${eventId}/attendance/check-in`,
-            {
-              method: "POST",
-              headers: {
-                "Content-Type": "application/json"
-              },
-              body: JSON.stringify({
-                professional_id: user.id,
-                latitude: position.coords.latitude,
-                longitude: position.coords.longitude
-              })
-            }
-          );
-  
-          const data = await response.json();
-  
-          if (response.ok) {
-            setAttendanceMessage(
-              `Attendance marked successfully. You are ${data.distance}m from the event.`
-            );
-  
-            await fetchAssignedEvents();
-          } else {
-            setAttendanceMessage(
-              data.message || "Attendance could not be marked."
-            );
-          }
-  
-        } catch (error) {
-          console.error("Mark Attendance Error:", error);
-  
-          setAttendanceMessage(
-            "Unable to connect to server."
-          );
-        }
-      },
-  
-      (error) => {
-        console.error("Geolocation Error:", error);
-  
-        if (error.code === 1) {
-          setAttendanceMessage(
-            "Location permission denied. Please allow location access."
-          );
-        } else if (error.code === 2) {
-          setAttendanceMessage(
-            "Unable to determine your location."
-          );
-        } else if (error.code === 3) {
-          setAttendanceMessage(
-            "Location request timed out."
-          );
-        } else {
-          setAttendanceMessage(
-            "Unable to get your location."
-          );
-        }
-      },
-  
-      {
-        enableHighAccuracy: true,
-        timeout: 10000,
-        maximumAge: 0
-      }
+
+// LOAD ASSIGNED EVENTS WHEN DASHBOARD OPENS
+useEffect(() => {
+  fetchAssignedEvents();
+}, []);
+
+
+// MARK ATTENDANCE USING CURRENT LOCATION
+const markAttendance = (eventId) => {
+
+  if (!user?.id) {
+    setAttendanceMessage(
+      "Professional login information not found."
     );
-  };
+    return;
+  }
+
+  // Check browser support
+  if (!navigator.geolocation) {
+    setAttendanceMessage(
+      "Geolocation is not supported by your browser."
+    );
+    return;
+  }
+
+  setAttendanceMessage(
+    "Getting your current location..."
+  );
+
+  navigator.geolocation.getCurrentPosition(
+
+    async (position) => {
+
+      try {
+
+        const latitude = position.coords.latitude;
+        const longitude = position.coords.longitude;
+
+        console.log("Current Latitude:", latitude);
+        console.log("Current Longitude:", longitude);
+
+        const response = await fetch(
+          `http://localhost:5500/api/events/${eventId}/attendance/check-in`,
+          {
+            method: "POST",
+
+            headers: {
+              "Content-Type": "application/json"
+            },
+
+            body: JSON.stringify({
+              professional_id: user.id,
+              latitude: latitude,
+              longitude: longitude
+            })
+          }
+        );
+
+        const data = await response.json();
+
+        // SUCCESS
+        if (response.ok) {
+
+          setAttendanceMessage(
+            `✓ Attendance marked successfully. Distance: ${data.distance}m`
+          );
+
+          // Reload attendance data
+          await fetchAssignedEvents();
+
+        }
+
+        // REJECTED
+        else {
+
+          setAttendanceMessage(
+            `✕ ${data.message || "Attendance rejected."} Status: Absent`
+          );
+
+          // Reload attendance data
+          await fetchAssignedEvents();
+
+        }
+
+      } catch (error) {
+
+        console.error(
+          "Mark Attendance Error:",
+          error
+        );
+
+        setAttendanceMessage(
+          "Unable to connect to server."
+        );
+
+      }
+
+    },
+
+    (error) => {
+
+      console.error(
+        "Geolocation Error:",
+        error
+      );
+
+      if (error.code === 1) {
+
+        setAttendanceMessage(
+          "Location permission denied. Please allow location access for this website."
+        );
+
+      } else if (error.code === 2) {
+
+        setAttendanceMessage(
+          "Unable to determine your location."
+        );
+
+      } else if (error.code === 3) {
+
+        setAttendanceMessage(
+          "Location request timed out. Please try again."
+        );
+
+      } else {
+
+        setAttendanceMessage(
+          "Unable to get your location."
+        );
+
+      }
+
+    },
+
+    {
+      enableHighAccuracy: true,
+      timeout: 15000,
+      maximumAge: 0
+    }
+
+  );
+};
 
   const renderSection = () => {
     switch (activeSection) {
@@ -633,12 +662,18 @@ function ProfessionalDashboard() {
         
                 <div className="stat-card">
                   <h3>Total Events</h3>
-                  <h2>{assignedEvents.length}</h2>
+        
+                  <h2>
+                    {assignedEvents.length}
+                  </h2>
+        
                   <p>Assigned events</p>
                 </div>
         
+        
                 <div className="stat-card">
                   <h3>Present</h3>
+        
                   <h2>
                     {
                       assignedEvents.filter(
@@ -647,11 +682,14 @@ function ProfessionalDashboard() {
                       ).length
                     }
                   </h2>
+        
                   <p>Attendance marked</p>
                 </div>
         
+        
                 <div className="stat-card">
-                  <h3>Pending</h3>
+                  <h3>Absent</h3>
+        
                   <h2>
                     {
                       assignedEvents.filter(
@@ -660,14 +698,17 @@ function ProfessionalDashboard() {
                       ).length
                     }
                   </h2>
-                  <p>Attendance pending</p>
+        
+                  <p>Attendance pending / absent</p>
                 </div>
         
               </div>
         
+        
               <div className="dashboard-card">
         
                 <h2>My Assigned Events</h2>
+        
         
                 {assignedEvents.length === 0 ? (
         
@@ -677,68 +718,109 @@ function ProfessionalDashboard() {
         
                 ) : (
         
-                  assignedEvents.map((event) => (
+                  assignedEvents.map((event) => {
         
-                    <div
-                      className="attendance-row"
-                      key={event.id}
-                    >
+                    const isPresent =
+                      event.attendance_status === "present";
         
-                      <div>
-                        <strong>
-                          {event.title}
-                        </strong>
+                    return (
         
-                        <p>
-                          📍 {event.location || "Location not specified"}
-                        </p>
+                      <div
+                        className="attendance-row"
+                        key={event.id}
+                      >
         
-                        <p>
-                          📅 {event.event_date}
-                        </p>
-        
-                        <p>
-                          ⏰ {event.start_time || "--"} -
-                          {" "}
-                          {event.end_time || "--"}
-                        </p>
-        
-                        {event.check_in && (
-                          <p>
-                            🕐 Check-in:{" "}
-                            {new Date(
-                              event.check_in
-                            ).toLocaleString("en-IN")}
-                          </p>
-                        )}
-                      </div>
-        
-                      <div>
-        
-                        {event.attendance_status === "present" ? (
+                        <div>
         
                           <strong>
-                            ✓ Present
+                            {event.title}
                           </strong>
         
-                        ) : (
+                          <p>
+                            📍{" "}
+                            {event.location ||
+                              "Location not specified"}
+                          </p>
         
-                          <button
-                            className="primary-btn"
-                            onClick={() =>
-                              markAttendance(event.id)
-                            }
-                          >
-                            📍 Mark Attendance
-                          </button>
+                          <p>
+                            📅 {event.event_date}
+                          </p>
         
-                        )}
+                          <p>
+                            ⏰{" "}
+                            {event.start_time || "--"}
+                            {" - "}
+                            {event.end_time || "--"}
+                          </p>
+        
+        
+                          {isPresent && event.check_in && (
+        
+                            <p>
+                              🕐 Check-in:{" "}
+                              {new Date(
+                                event.check_in
+                              ).toLocaleString("en-IN")}
+                            </p>
+        
+                          )}
+        
+                        </div>
+        
+        
+                        <div>
+        
+                          {isPresent ? (
+        
+                            <div>
+        
+                              <strong>
+                                ✓ Present
+                              </strong>
+        
+                              {event.check_in && (
+                                <p>
+                                  Marked at:{" "}
+                                  {new Date(
+                                    event.check_in
+                                  ).toLocaleTimeString(
+                                    "en-IN"
+                                  )}
+                                </p>
+                              )}
+        
+                            </div>
+        
+                          ) : (
+        
+                            <div>
+        
+                              <strong>
+                                ✕ Absent
+                              </strong>
+        
+                              <br />
+        
+                              <button
+                                className="primary-btn"
+                                onClick={() =>
+                                  markAttendance(event.id)
+                                }
+                              >
+                                📍 Mark Attendance
+                              </button>
+        
+                            </div>
+        
+                          )}
+        
+                        </div>
         
                       </div>
         
-                    </div>
+                    );
         
-                  ))
+                  })
         
                 )}
         
