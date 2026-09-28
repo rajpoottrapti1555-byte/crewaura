@@ -922,3 +922,34 @@
     }
   
   }
+  .attendance-buttons {
+    display: flex;
+    gap: 10px;
+    margin-top: 15px;
+  }
+  
+  .attendance-button {
+    flex: 1;
+    padding: 9px 12px;
+    border: 1px solid #6c3df5;
+    border-radius: 8px;
+    background: transparent;
+    color: #6c3df5;
+    font-weight: 600;
+    cursor: pointer;
+  }
+  
+  .attendance-button:hover {
+    background: #6c3df5;
+    color: white;
+  }
+  
+  .active-present {
+    background: #6c3df5;
+    color: white;
+  }
+  
+  .active-absent {
+    background: #555;
+    color: white;
+  }

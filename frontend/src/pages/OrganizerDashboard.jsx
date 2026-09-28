@@ -13,7 +13,7 @@ function OrganizerDashboard() {
   const [connections, setConnections] = useState([]);
   const [eventAttendance, setEventAttendance] = useState([]);
   const [selectedAttendanceEvent, setSelectedAttendanceEvent] = useState(null);
-
+  const [eventProfessionals, setEventProfessionals] = useState({});
   const [formData, setFormData] = useState({
     title: "",
     description: "",
@@ -80,11 +80,19 @@ function OrganizerDashboard() {
 
   const handleConnect = async (receiverId, receiverName) => {
     try {
+      console.log("CURRENT USER:", user);
+      console.log("SENDER ID:", user?.id);
+      console.log("RECEIVER ID:", receiverId);
+  
       if (!user?.id) {
         setMessage("User login information not found");
         return;
       }
-      
+  
+      if (!receiverId) {
+        setMessage("Professional/Organizer ID not found");
+        return;
+      }
   
       const response = await fetch(
         "http://localhost:5500/api/connections/request",
@@ -94,8 +102,8 @@ function OrganizerDashboard() {
             "Content-Type": "application/json",
           },
           body: JSON.stringify({
-            sender_id: user.id,
-            receiver_id: receiverId,
+            sender_id: Number(user.id),
+            receiver_id: Number(receiverId),
             message: "I would like to connect with you.",
           }),
         }
@@ -103,11 +111,15 @@ function OrganizerDashboard() {
   
       const data = await response.json();
   
+      console.log("Connection Response:", data);
+  
       if (response.ok) {
         setMessage(`Connection request sent to ${receiverName}`);
+        fetchConnectionRequests();
       } else {
         setMessage(data.message || "Unable to send connection request");
       }
+  
     } catch (error) {
       console.error("Connection Error:", error);
       setMessage("Unable to connect to server");
@@ -194,6 +206,10 @@ function OrganizerDashboard() {
   
       if (response.ok) {
         setEvents(data);
+      
+        data.forEach((event) => {
+          fetchEventProfessionals(event.id);
+        });
       } else {
         setMessage(data.message || "Unable to load events");
       }
@@ -322,6 +338,36 @@ const fetchEventAttendance = async (eventId) => {
     }
   } catch (error) {
     console.error("Fetch Attendance Error:", error);
+    setMessage("Unable to connect to server");
+  }
+};
+
+
+const fetchEventProfessionals = async (eventId) => {
+  try {
+    const response = await fetch(
+      `http://localhost:5500/api/events/${eventId}/professionals`
+    );
+
+    const data = await response.json();
+
+    if (response.ok) {
+      setEventProfessionals((previous) => ({
+        ...previous,
+        [eventId]: data
+      }));
+    } else {
+      setMessage(
+        data.message || "Unable to load event professionals"
+      );
+    }
+
+  } catch (error) {
+    console.error(
+      "Fetch Event Professionals Error:",
+      error
+    );
+
     setMessage("Unable to connect to server");
   }
 };
@@ -462,6 +508,30 @@ const updateAttendance = async (eventId, professionalId, status) => {
       setMessage("Unable to connect to server");
     }
   };
+
+
+  const getEventStatus = (event) => {
+    const now = new Date();
+  
+    const start = new Date(
+      `${event.event_date}T${event.start_time || "00:00"}`
+    );
+  
+    const end = new Date(
+      `${event.event_date}T${event.end_time || "23:59"}`
+    );
+  
+    if (now < start) {
+      return "Upcoming";
+    }
+  
+    if (now >= start && now <= end) {
+      return "Ongoing";
+    }
+  
+    return "Completed";
+  };
+
 
   const markAllRead = () => {
     setNotifications(
@@ -1067,60 +1137,61 @@ const updateAttendance = async (eventId, professionalId, status) => {
               ></textarea>
 
                 </div>
+                <div className="crew-form-group crew-full-width">
+  <label>Select Team for This Event</label>
 
-                {/* SELECTED TEAM */}
-        <div className="crew-form-group crew-full-width">
+  {professionals.length === 0 ? (
+    <div className="crew-empty-state">
+      <h3>No professionals found</h3>
+      <p>Registered professionals will appear here.</p>
+    </div>
+  ) : (
+    <div className="crew-people-grid">
+      {professionals.map((professional) => {
+        const isSelected = selectedProfessionals.includes(
+          professional.id
+        );
 
-          <h3>Selected Team</h3>
+        return (
+          <div
+            className="crew-person-card"
+            key={professional.id}
+          >
+            <div className="crew-person-avatar">
+              {professional.name
+                ? professional.name
+                    .split(" ")
+                    .map((word) => word[0])
+                    .join("")
+                    .toUpperCase()
+                : "PR"}
+            </div>
 
-          <p>Select professionals for this event.</p>
+            <h3>{professional.name}</h3>
 
-          <div className="crew-people-grid">
+            <p>Event Professional</p>
 
-            {professionals.map((professional) => (
-              <div
-                className="crew-person-card"
-                key={professional.id}
-              >
+            <span>📧 {professional.email}</span>
 
-                <div className="crew-person-avatar">
-                  {professional.name
-                    ? professional.name
-                        .split(" ")
-                        .map((word) => word[0])
-                        .join("")
-                        .toUpperCase()
-                    : "PR"}
-                </div>
-
-                <h3>{professional.name}</h3>
-
-                <p>Event Professional</p>
-
-                <span>📧 {professional.email}</span>
-
-                <label>
-                  <input
-                    type="checkbox"
-                    checked={selectedProfessionals.includes(
-                      professional.id
-                    )}
-                    onChange={() =>
-                      handleProfessionalSelection(
-                        professional.id
-                      )
-                    }
-                  />
-
-                  Select for this event
-                </label>
-
-              </div>
-            ))}
-
+            <button
+              type="button"
+              className={
+                isSelected
+                  ? "crew-team-button selected"
+                  : "crew-team-button"
+              }
+              onClick={() =>
+                handleProfessionalSelection(professional.id)
+              }
+            >
+              {isSelected ? "✓ Selected" : "+ Select Team"}
+            </button>
           </div>
-
-        </div>
+        );
+      })}
+    </div>
+  )}
+</div>
                 <button className="crew-primary-button">
                   Create Event
                 </button>
@@ -1165,7 +1236,7 @@ const updateAttendance = async (eventId, professionalId, status) => {
           >
 
             <div className="event-card-status">
-              Upcoming
+            <span>{getEventStatus(event)}</span>
             </div>
 
             <h3>{event.title}</h3>
@@ -1187,8 +1258,11 @@ const updateAttendance = async (eventId, professionalId, status) => {
               </span>
 
               <span>
-                👥 Workers not assigned
-              </span>
+  👥{" "}
+  {eventProfessionals[event.id]
+    ? `${eventProfessionals[event.id].length} Professionals`
+    : "Loading team..."}
+</span>
 
             </div>
 
@@ -1197,7 +1271,15 @@ const updateAttendance = async (eventId, professionalId, status) => {
                 {event.description}
               </p>
             )}
-
+             <button
+  className="crew-primary-button"
+  onClick={() => {
+    fetchEventProfessionals(event.id);
+    fetchEventAttendance(event.id);
+  }}
+>
+  View Team & Attendance
+</button>
           </div>
         ))}
 
@@ -1208,7 +1290,129 @@ const updateAttendance = async (eventId, professionalId, status) => {
 )}
 
 
+{selectedAttendanceEvent && (
+  <section className="crew-section">
 
+    <div className="crew-section-heading">
+      <h2>Team & Attendance</h2>
+
+      <button
+        className="crew-secondary-button"
+        onClick={() => {
+          setSelectedAttendanceEvent(null);
+          setEventAttendance([]);
+        }}
+      >
+        Close
+      </button>
+    </div>
+
+    {eventProfessionals[selectedAttendanceEvent]?.length === 0 ? (
+      <div className="crew-empty-state">
+        <h3>No professionals assigned</h3>
+        <p>
+          No team members have been assigned to this event.
+        </p>
+      </div>
+    ) : (
+      <div className="crew-people-grid">
+
+        {eventProfessionals[selectedAttendanceEvent]?.map(
+          (professional) => {
+
+            const attendance = eventAttendance.find(
+              (person) =>
+                person.professional_id ===
+                professional.professional_id
+            );
+
+            return (
+              <div
+                className="crew-person-card"
+                key={professional.professional_id}
+              >
+
+                <div className="crew-person-avatar">
+                  {professional.name
+                    ? professional.name
+                        .split(" ")
+                        .map((word) => word[0])
+                        .join("")
+                        .toUpperCase()
+                    : "PR"}
+                </div>
+
+                <h3>{professional.name}</h3>
+
+                <p>
+                  📧 {professional.email}
+                </p>
+
+                <p>
+                  Status:{" "}
+                  <strong>
+                    {attendance?.status || "Absent"}
+                  </strong>
+                </p>
+
+                <p>
+                  Check-in:{" "}
+                  {attendance?.check_in
+                    ? new Date(
+                        attendance.check_in
+                      ).toLocaleString("en-IN")
+                    : "Not checked in"}
+                </p>
+
+                <div className="attendance-buttons">
+
+                  <button
+                    type="button"
+                    className={
+                      attendance?.status === "present"
+                        ? "attendance-button active-present"
+                        : "attendance-button"
+                    }
+                    onClick={() =>
+                      updateAttendance(
+                        selectedAttendanceEvent,
+                        professional.professional_id,
+                        "present"
+                      )
+                    }
+                  >
+                    ✓ Present
+                  </button>
+
+                  <button
+                    type="button"
+                    className={
+                      attendance?.status === "absent"
+                        ? "attendance-button active-absent"
+                        : "attendance-button"
+                    }
+                    onClick={() =>
+                      updateAttendance(
+                        selectedAttendanceEvent,
+                        professional.professional_id,
+                        "absent"
+                      )
+                    }
+                  >
+                    ✕ Absent
+                  </button>
+
+                </div>
+
+              </div>
+            );
+          }
+        )}
+
+      </div>
+    )}
+  </section>
+)}
 
 {/* ================= FIND ORGANIZERS ================= */}
 {activeSection === "organizers" && (
