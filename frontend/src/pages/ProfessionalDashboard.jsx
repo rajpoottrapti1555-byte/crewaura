@@ -1,9 +1,11 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 function ProfessionalDashboard() {
-  const [activeSection, setActiveSection] = useState("dashboard");
-
-  const [offers, setOffers] = useState([
+ const user = JSON.parse(localStorage.getItem("user"));
+ const [activeSection, setActiveSection] = useState("dashboard");
+ const [assignedEvents, setAssignedEvents] = useState([]);
+ const [attendanceMessage, setAttendanceMessage] = useState("");
+ const [offers, setOffers] = useState([
     {
       id: 1,
       event: "Wedding Celebration",
@@ -53,6 +55,117 @@ function ProfessionalDashboard() {
       previousOffers.map((offer) =>
         offer.id === id ? { ...offer, status } : offer
       )
+    );
+  };
+
+  const fetchAssignedEvents = async () => {
+    if (!user?.id) {
+      return;
+    }
+  
+    try {
+      const response = await fetch(
+        `http://localhost:5500/api/events/professional/${user.id}`
+      );
+  
+      const data = await response.json();
+  
+      if (response.ok) {
+        setAssignedEvents(data);
+      } else {
+        setAttendanceMessage(
+          data.message || "Unable to load assigned events"
+        );
+      }
+    } catch (error) {
+      console.error("Fetch Assigned Events Error:", error);
+  
+      setAttendanceMessage(
+        "Unable to connect to server"
+      );
+    }
+  };
+  useEffect(() => {
+    fetchAssignedEvents();
+  }, []);
+  const markAttendance = (eventId) => {
+    if (!navigator.geolocation) {
+      setAttendanceMessage(
+        "Geolocation is not supported by your browser."
+      );
+      return;
+    }
+  
+    setAttendanceMessage("Getting your location...");
+  
+    navigator.geolocation.getCurrentPosition(
+      async (position) => {
+        try {
+          const response = await fetch(
+            `http://localhost:5500/api/events/${eventId}/attendance/check-in`,
+            {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json"
+              },
+              body: JSON.stringify({
+                professional_id: user.id,
+                latitude: position.coords.latitude,
+                longitude: position.coords.longitude
+              })
+            }
+          );
+  
+          const data = await response.json();
+  
+          if (response.ok) {
+            setAttendanceMessage(
+              `Attendance marked successfully. You are ${data.distance}m from the event.`
+            );
+  
+            await fetchAssignedEvents();
+          } else {
+            setAttendanceMessage(
+              data.message || "Attendance could not be marked."
+            );
+          }
+  
+        } catch (error) {
+          console.error("Mark Attendance Error:", error);
+  
+          setAttendanceMessage(
+            "Unable to connect to server."
+          );
+        }
+      },
+  
+      (error) => {
+        console.error("Geolocation Error:", error);
+  
+        if (error.code === 1) {
+          setAttendanceMessage(
+            "Location permission denied. Please allow location access."
+          );
+        } else if (error.code === 2) {
+          setAttendanceMessage(
+            "Unable to determine your location."
+          );
+        } else if (error.code === 3) {
+          setAttendanceMessage(
+            "Location request timed out."
+          );
+        } else {
+          setAttendanceMessage(
+            "Unable to get your location."
+          );
+        }
+      },
+  
+      {
+        enableHighAccuracy: true,
+        timeout: 10000,
+        maximumAge: 0
+      }
     );
   };
 
@@ -385,46 +498,135 @@ function ProfessionalDashboard() {
           </div>
         );
 
-      case "attendance":
-        return (
-          <div className="professional-content">
-            <h1>Attendance</h1>
-
-            <div className="stats-grid">
-              <div className="stat-card">
-                <h3>Total Events</h3>
-                <h2>12</h2>
+        case "attendance":
+          return (
+            <div className="professional-content">
+        
+              <h1>Attendance</h1>
+        
+              {attendanceMessage && (
+                <div className="dashboard-card">
+                  <p>{attendanceMessage}</p>
+                </div>
+              )}
+        
+              <div className="stats-grid">
+        
+                <div className="stat-card">
+                  <h3>Total Events</h3>
+                  <h2>{assignedEvents.length}</h2>
+                  <p>Assigned events</p>
+                </div>
+        
+                <div className="stat-card">
+                  <h3>Present</h3>
+                  <h2>
+                    {
+                      assignedEvents.filter(
+                        (event) =>
+                          event.attendance_status === "present"
+                      ).length
+                    }
+                  </h2>
+                  <p>Attendance marked</p>
+                </div>
+        
+                <div className="stat-card">
+                  <h3>Pending</h3>
+                  <h2>
+                    {
+                      assignedEvents.filter(
+                        (event) =>
+                          event.attendance_status !== "present"
+                      ).length
+                    }
+                  </h2>
+                  <p>Attendance pending</p>
+                </div>
+        
               </div>
-
-              <div className="stat-card">
-                <h3>Present</h3>
-                <h2>11</h2>
+        
+              <div className="dashboard-card">
+        
+                <h2>My Assigned Events</h2>
+        
+                {assignedEvents.length === 0 ? (
+        
+                  <p>
+                    No events have been assigned to you yet.
+                  </p>
+        
+                ) : (
+        
+                  assignedEvents.map((event) => (
+        
+                    <div
+                      className="attendance-row"
+                      key={event.id}
+                    >
+        
+                      <div>
+                        <strong>
+                          {event.title}
+                        </strong>
+        
+                        <p>
+                          📍 {event.location || "Location not specified"}
+                        </p>
+        
+                        <p>
+                          📅 {event.event_date}
+                        </p>
+        
+                        <p>
+                          ⏰ {event.start_time || "--"} -
+                          {" "}
+                          {event.end_time || "--"}
+                        </p>
+        
+                        {event.check_in && (
+                          <p>
+                            🕐 Check-in:{" "}
+                            {new Date(
+                              event.check_in
+                            ).toLocaleString("en-IN")}
+                          </p>
+                        )}
+                      </div>
+        
+                      <div>
+        
+                        {event.attendance_status === "present" ? (
+        
+                          <strong>
+                            ✓ Present
+                          </strong>
+        
+                        ) : (
+        
+                          <button
+                            className="primary-btn"
+                            onClick={() =>
+                              markAttendance(event.id)
+                            }
+                          >
+                            📍 Mark Attendance
+                          </button>
+        
+                        )}
+        
+                      </div>
+        
+                    </div>
+        
+                  ))
+        
+                )}
+        
               </div>
-
-              <div className="stat-card">
-                <h3>Absent</h3>
-                <h2>1</h2>
-              </div>
+        
             </div>
-
-            <div className="dashboard-card">
-              <h2>Attendance History</h2>
-
-              <div className="attendance-row">
-                <span>Wedding Event</span>
-                <span>15 Sep 2026</span>
-                <strong>Present</strong>
-              </div>
-
-              <div className="attendance-row">
-                <span>Corporate Event</span>
-                <span>10 Sep 2026</span>
-                <strong>Present</strong>
-              </div>
-            </div>
-          </div>
-        );
-
+          );
       case "earnings":
         return (
           <div className="professional-content">
