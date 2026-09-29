@@ -50,7 +50,7 @@ router.post("/", async (req, res) => {
         event_date,
         start_time || null,
         end_time || null,
-      ]
+      ],
     );
 
     res.status(201).json({
@@ -89,7 +89,7 @@ router.get("/organizer/:organizerId", async (req, res) => {
        FROM events
        WHERE organizer_id = ?
        ORDER BY event_date DESC`,
-      [organizerId]
+      [organizerId],
     );
 
     res.json(events);
@@ -102,19 +102,13 @@ router.get("/organizer/:organizerId", async (req, res) => {
   }
 });
 
-<<<<<<< HEAD
-// GET PROFESSIONALS ASSIGNED TO AN EVENT
-router.get("/:eventId/professionals", async (req, res) => {
-=======
 // =====================================================
 // ASSIGN PROFESSIONALS TO EVENT
 // =====================================================
 router.post("/:eventId/professionals", async (req, res) => {
->>>>>>> f55030000c660fad2f2d46c642e67a117f8d662e
   try {
     const { eventId } = req.params;
 
-<<<<<<< HEAD
     const [professionals] = await db.execute(
       `SELECT
         ep.id,
@@ -131,11 +125,8 @@ router.post("/:eventId/professionals", async (req, res) => {
     );
 
     res.json(professionals);
-=======
-    if (
-      !Array.isArray(professional_ids) ||
-      professional_ids.length === 0
-    ) {
+
+    if (!Array.isArray(professional_ids) || professional_ids.length === 0) {
       return res.status(400).json({
         message: "At least one professional is required",
       });
@@ -146,14 +137,13 @@ router.post("/:eventId/professionals", async (req, res) => {
         `INSERT INTO event_professionals
          (event_id, professional_id)
          VALUES (?, ?)`,
-        [eventId, professionalId]
+        [eventId, professionalId],
       );
     }
 
     res.status(201).json({
       message: "Professionals assigned to event successfully",
     });
->>>>>>> f55030000c660fad2f2d46c642e67a117f8d662e
   } catch (error) {
     console.error("Get selected Professionals Error:", error);
 
@@ -187,7 +177,7 @@ router.get("/:eventId/attendance", async (req, res) => {
          ON ea.professional_id = u.id
        WHERE ea.event_id = ?
        ORDER BY u.name ASC`,
-      [eventId]
+      [eventId],
     );
 
     res.json(attendance);
@@ -200,7 +190,6 @@ router.get("/:eventId/attendance", async (req, res) => {
   }
 });
 
-<<<<<<< HEAD
 // GET EVENTS ASSIGNED TO A PROFESSIONAL
 router.get("/professional/:professionalId", async (req, res) => {
   try {
@@ -240,13 +229,13 @@ router.get("/professional/:professionalId", async (req, res) => {
     });
   }
 });
-=======
 // =====================================================
->>>>>>> f55030000c660fad2f2d46c642e67a117f8d662e
+
 // UPDATE PROFESSIONAL ATTENDANCE
 // =====================================================
 router.put("/:eventId/attendance/:professionalId", async (req, res) => {
-  try { console.log("ATTENDANCE API HIT:", req.params, req.body);
+  try {
+    console.log("ATTENDANCE API HIT:", req.params, req.body);
     const { eventId, professionalId } = req.params;
     const { status, latitude, longitude } = req.body;
 
@@ -276,7 +265,7 @@ router.put("/:eventId/attendance/:professionalId", async (req, res) => {
        WHERE e.id = ?
        AND es.professional_id = ?
        LIMIT 1`,
-      [eventId, professionalId]
+      [eventId, professionalId],
     );
 
     if (eventRows.length === 0) {
@@ -307,7 +296,7 @@ router.put("/:eventId/attendance/:professionalId", async (req, res) => {
         `SELECT
           DATE(?) AS event_day,
           CURDATE() AS today`,
-        [event.event_date]
+        [event.event_date],
       );
 
       if (dateRows[0].event_day !== dateRows[0].today) {
@@ -319,10 +308,7 @@ router.put("/:eventId/attendance/:professionalId", async (req, res) => {
       // ------------------------------------------------
       // Event coordinates required
       // ------------------------------------------------
-      if (
-        event.event_latitude === null ||
-        event.event_longitude === null
-      ) {
+      if (event.event_latitude === null || event.event_longitude === null) {
         return res.status(400).json({
           message: "Event location coordinates are not available",
         });
@@ -359,13 +345,9 @@ router.put("/:eventId/attendance/:professionalId", async (req, res) => {
       const eventLatitude = Number(event.event_latitude);
       const eventLongitude = Number(event.event_longitude);
 
-      const dLatitude = toRadians(
-        currentLatitude - eventLatitude
-      );
+      const dLatitude = toRadians(currentLatitude - eventLatitude);
 
-      const dLongitude = toRadians(
-        currentLongitude - eventLongitude
-      );
+      const dLongitude = toRadians(currentLongitude - eventLongitude);
 
       const a =
         Math.sin(dLatitude / 2) ** 2 +
@@ -374,12 +356,7 @@ router.put("/:eventId/attendance/:professionalId", async (req, res) => {
           Math.sin(dLongitude / 2) ** 2;
 
       const distance =
-        2 *
-        earthRadius *
-        Math.atan2(
-          Math.sqrt(a),
-          Math.sqrt(1 - a)
-        );
+        2 * earthRadius * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 
       // ------------------------------------------------
       // Maximum allowed distance = 200 meters
@@ -388,8 +365,7 @@ router.put("/:eventId/attendance/:professionalId", async (req, res) => {
 
       if (distance > ATTENDANCE_RADIUS) {
         return res.status(403).json({
-          message:
-            "You are too far from the event location to mark attendance",
+          message: "You are too far from the event location to mark attendance",
           distance: Math.round(distance),
           allowedRadius: ATTENDANCE_RADIUS,
         });
@@ -414,12 +390,7 @@ router.put("/:eventId/attendance/:professionalId", async (req, res) => {
           check_in = NOW(),
           check_in_latitude = VALUES(check_in_latitude),
           check_in_longitude = VALUES(check_in_longitude)`,
-        [
-          eventId,
-          professionalId,
-          currentLatitude,
-          currentLongitude,
-        ]
+        [eventId, professionalId, currentLatitude, currentLongitude],
       );
 
       // ------------------------------------------------
@@ -436,7 +407,7 @@ router.put("/:eventId/attendance/:professionalId", async (req, res) => {
          FROM event_attendance
          WHERE event_id = ?
          AND professional_id = ?`,
-        [eventId, professionalId]
+        [eventId, professionalId],
       );
 
       return res.json({
@@ -468,13 +439,12 @@ router.put("/:eventId/attendance/:professionalId", async (req, res) => {
         check_out = NULL,
         check_in_latitude = NULL,
         check_in_longitude = NULL`,
-      [eventId, professionalId]
+      [eventId, professionalId],
     );
 
     return res.json({
       message: "Attendance marked as absent",
     });
-
   } catch (error) {
     console.error("Update Attendance Error:", error);
 
@@ -484,7 +454,6 @@ router.put("/:eventId/attendance/:professionalId", async (req, res) => {
   }
 });
 
-<<<<<<< HEAD
 // MARK ATTENDANCE USING GPS LOCATION
 router.post("/:eventId/attendance/check-in", async (req, res) => {
   try {
@@ -640,159 +609,7 @@ router.post("/:eventId/attendance/check-in", async (req, res) => {
     });
   }
 });
-// MARK ATTENDANCE USING GPS LOCATION
-router.post("/:eventId/attendance/check-in", async (req, res) => {
-  try {
-    const { eventId } = req.params;
 
-    const { professional_id, latitude, longitude } = req.body;
-
-    // Check required data
-    if (!professional_id || latitude === undefined || longitude === undefined) {
-      return res.status(400).json({
-        message: "Professional ID, latitude and longitude are required",
-        status: "absent",
-      });
-    }
-
-    // Check professional is assigned to this event
-    const [assignment] = await db.execute(
-      `SELECT id
-       FROM event_professionals
-       WHERE event_id = ?
-       AND professional_id = ?`,
-      [eventId, professional_id],
-    );
-
-    if (assignment.length === 0) {
-      return res.status(403).json({
-        message: "You are not assigned to this event",
-        status: "absent",
-      });
-    }
-
-    // Get event location and event timing
-    const [events] = await db.execute(
-      `SELECT latitude, longitude, event_date, start_time, end_time
-       FROM events
-       WHERE id = ?`,
-      [eventId],
-    );
-
-    if (events.length === 0) {
-      return res.status(404).json({
-        message: "Event not found",
-        status: "absent",
-      });
-    }
-
-    const event = events[0];
-
-    const eventLatitude = Number(event.latitude);
-    const eventLongitude = Number(event.longitude);
-
-    // Check event location
-    if (!Number.isFinite(eventLatitude) || !Number.isFinite(eventLongitude)) {
-      return res.status(400).json({
-        message: "Event location is not configured",
-        status: "absent",
-      });
-    }
-
-    const professionalLatitude = Number(latitude);
-    const professionalLongitude = Number(longitude);
-
-    // Validate professional coordinates
-    if (
-      !Number.isFinite(professionalLatitude) ||
-      !Number.isFinite(professionalLongitude)
-    ) {
-      return res.status(400).json({
-        message: "Invalid location received",
-        status: "absent",
-      });
-    }
-
-    // Haversine distance calculation
-    const toRadians = (value) => {
-      return (value * Math.PI) / 180;
-    };
-
-    const earthRadius = 6371000;
-
-    const latDifference = toRadians(professionalLatitude - eventLatitude);
-
-    const lonDifference = toRadians(professionalLongitude - eventLongitude);
-
-    const a =
-      Math.sin(latDifference / 2) * Math.sin(latDifference / 2) +
-      Math.cos(toRadians(eventLatitude)) *
-        Math.cos(toRadians(professionalLatitude)) *
-        Math.sin(lonDifference / 2) *
-        Math.sin(lonDifference / 2);
-
-    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-
-    const distance = earthRadius * c;
-
-    // Allowed radius = 200 meters
-    const allowedRadius = 200;
-
-    // Outside event location
-    if (distance > allowedRadius) {
-      // Make attendance absent
-      await db.execute(
-        `UPDATE event_attendance
-         SET status = 'absent',
-             check_in = NULL,
-             check_out = NULL
-         WHERE event_id = ?
-         AND professional_id = ?`,
-        [eventId, professional_id],
-      );
-
-      return res.status(403).json({
-        message: "Attendance rejected. You are outside the event location.",
-        status: "absent",
-        distance: Math.round(distance),
-        allowed_radius: allowedRadius,
-      });
-    }
-
-    // Location is valid → mark PRESENT
-    await db.execute(
-      `UPDATE event_attendance
-       SET status = 'present',
-           check_in = NOW()
-       WHERE event_id = ?
-       AND professional_id = ?`,
-      [eventId, professional_id],
-    );
-
-    // Get saved attendance timestamp
-    const [attendance] = await db.execute(
-      `SELECT status, check_in, check_out
-       FROM event_attendance
-       WHERE event_id = ?
-       AND professional_id = ?
-       ORDER BY id DESC
-       LIMIT 1`,
-      [eventId, professional_id],
-    );
-
-    res.json({
-      message: "Attendance marked successfully",
-      status: "present",
-      distance: Math.round(distance),
-      check_in: attendance.length > 0 ? attendance[0].check_in : null,
-    });
-  } catch (error) {
-    console.error("GPS Attendance Error:", error);
-
-    res.status(500).json({
-      message: "Unable to mark attendance",
-      status: "absent",
-=======
 // =====================================================
 // GET EVENTS ASSIGNED TO PROFESSIONAL
 // =====================================================
@@ -842,7 +659,7 @@ router.get("/professional/:professionalId", async (req, res) => {
        WHERE es.professional_id = ?
 
        ORDER BY e.event_date ASC`,
-      [professionalId]
+      [professionalId],
     );
 
     res.json(events);
@@ -851,13 +668,8 @@ router.get("/professional/:professionalId", async (req, res) => {
 
     res.status(500).json({
       message: "Unable to fetch professional events",
->>>>>>> f55030000c660fad2f2d46c642e67a117f8d662e
     });
   }
 });
 
-<<<<<<< HEAD
 export default router;
-=======
-export default router;
->>>>>>> f55030000c660fad2f2d46c642e67a117f8d662e
