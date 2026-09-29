@@ -15,6 +15,12 @@ function ProfessionalDashboard() {
 
   const [attendanceLoading, setAttendanceLoading] = useState({});
   const [attendanceStatus, setAttendanceStatus] = useState({});
+  const [organizers, setOrganizers] = useState([]);
+  const [sendingRequest, setSendingRequest] = useState({});
+  const [selectedOrganizer, setSelectedOrganizer] = useState(null);
+
+
+
 
   const [profile, setProfile] = useState({
     name: "Professional User",
@@ -201,6 +207,23 @@ function ProfessionalDashboard() {
             "Upcoming events loading error:",
             error
           );
+        }
+
+
+        try {
+          const response = await fetch(
+            "http://localhost:5500/api/organizers"
+          );
+        
+          if (response.ok) {
+            const data = await response.json();
+            setOrganizers(data);
+            console.log("All Organizers:", data);
+          } else {
+            console.error("Organizers API error:", response.status);
+          }
+        } catch (error) {
+          console.error("Organizers loading error:", error);
         }
 
         // =====================================================
@@ -451,6 +474,60 @@ function ProfessionalDashboard() {
       alert(
         "Unable to process connection request."
       );
+    }
+  };
+
+  const sendConnectionRequest = async (organizerId) => {
+    try {
+      setSendingRequest((prev) => ({
+        ...prev,
+        [organizerId]: true,
+      }));
+  
+      const response = await fetch(
+        "http://localhost:5500/api/connections/request",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            sender_id: userId,
+            receiver_id: organizerId,
+            sender_role: "professional",
+            receiver_role: "organizer",
+            message: "I would like to connect with you.",
+          }),
+        }
+      );
+  
+      const data = await response.json();
+  
+      if (!response.ok) {
+        alert(data.message || "Failed to send connection request");
+        return;
+      }
+  
+      alert("Connection request sent!");
+  
+      setOrganizers((prev) =>
+        prev.map((organizer) =>
+          organizer.id === organizerId
+            ? {
+                ...organizer,
+                connection_status: "pending",
+              }
+            : organizer
+        )
+      );
+    } catch (error) {
+      console.error("Connection request error:", error);
+      alert("Something went wrong while sending request.");
+    } finally {
+      setSendingRequest((prev) => ({
+        ...prev,
+        [organizerId]: false,
+      }));
     }
   };
 
@@ -1061,71 +1138,128 @@ function ProfessionalDashboard() {
       // =====================================================
       // FIND ORGANIZERS
       // =====================================================
-
       case "organizers":
         return (
           <div className="professional-content">
-
-            <h1>
-              Find Organizers
-            </h1>
-
+            <h1>Find Organizers</h1>
+      
             <p className="section-description">
-              Connect with event organizers
-              and get more opportunities.
+              Browse organizers and send connection requests.
             </p>
-
+      
             <div className="organizer-grid">
-
-              {connections.length ===
-              0 ? (
-                <p>
-                  No organizers found.
-                </p>
+              {organizers.length === 0 ? (
+                <p>No organizers found.</p>
               ) : (
-                connections.map(
-                  (organizer) => (
-                    <div
-                      className="organizer-card"
-                      key={
-                        organizer.id
-                      }
-                    >
-
-                      <div className="organizer-avatar">
-                        {(
-                          organizer.name ||
-                          "O"
-                        ).charAt(0)}
-                      </div>
-
-                      <h3>
-                        {organizer.name}
-                      </h3>
-
-                      <p>
-                        {organizer.company ||
-                          organizer.organization ||
-                          "Event Organizer"}
-                      </p>
-
-                      <p>
-                        📍{" "}
-                        {organizer.location ||
-                          "Location not available"}
-                      </p>
-
-                      <button className="primary-btn">
+                organizers.map((organizer) => (
+                  <div className="organizer-card" key={organizer.id}>
+      
+                    <div className="organizer-avatar">
+                      {(organizer.name || "O").charAt(0).toUpperCase()}
+                    </div>
+      
+                    <h3>{organizer.name || "Organizer"}</h3>
+      
+                    <p>
+                      {organizer.company ||
+                        organizer.organization ||
+                        "Event Organizer"}
+                    </p>
+      
+                    <p>
+                      📍 {organizer.location || "Location not available"}
+                    </p>
+      
+                    <div className="organizer-actions">
+      
+                      <button
+                        className="secondary-btn"
+                        onClick={() =>
+                          setSelectedOrganizer(organizer)
+                        }
+                      >
                         View Profile
                       </button>
-
+      
+                      {organizer.connection_status === "connected" ? (
+                        <button className="primary-btn" disabled>
+                          Connected
+                        </button>
+                      ) : organizer.connection_status === "pending" ? (
+                        <button className="primary-btn" disabled>
+                          Request Sent
+                        </button>
+                      ) : (
+                        <button
+                          className="primary-btn"
+                          disabled={sendingRequest[organizer.id]}
+                          onClick={() =>
+                            sendConnectionRequest(organizer.id)
+                          }
+                        >
+                          {sendingRequest[organizer.id]
+                            ? "Sending..."
+                            : "Connect"}
+                        </button>
+                      )}
+      
                     </div>
-                  )
-                )
+                  </div>
+                ))
               )}
-
             </div>
-
+      
+            {selectedOrganizer && (
+              <div className="profile-modal-overlay">
+                <div className="profile-modal">
+      
+                  <button
+                    className="close-btn"
+                    onClick={() => setSelectedOrganizer(null)}
+                  >
+                    ✕
+                  </button>
+      
+                  <div className="organizer-avatar">
+                    {(selectedOrganizer.name || "O")
+                      .charAt(0)
+                      .toUpperCase()}
+                  </div>
+      
+                  <h2>{selectedOrganizer.name}</h2>
+      
+                  <p>
+                    <strong>Company:</strong>{" "}
+                    {selectedOrganizer.company ||
+                      selectedOrganizer.organization ||
+                      "Not available"}
+                  </p>
+      
+                  <p>
+                    <strong>Email:</strong>{" "}
+                    {selectedOrganizer.email || "Not available"}
+                  </p>
+      
+                  <p>
+                    <strong>Phone:</strong>{" "}
+                    {selectedOrganizer.phone || "Not available"}
+                  </p>
+      
+                  <p>
+                    <strong>Location:</strong>{" "}
+                    {selectedOrganizer.location || "Not available"}
+                  </p>
+      
+                  <button
+                    className="primary-btn"
+                    onClick={() => setSelectedOrganizer(null)}
+                  >
+                    Close
+                  </button>
+      
+                </div>
+              </div>
+            )}
           </div>
         );
 
