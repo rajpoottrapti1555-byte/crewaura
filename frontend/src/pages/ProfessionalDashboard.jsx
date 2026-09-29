@@ -276,6 +276,67 @@ function ProfessionalDashboard() {
 
   /*
   =========================================================
+  MARK ABSENT WITHOUT GPS
+  =========================================================
+  */
+
+  const markAttendanceWithoutGPS = async (
+    eventId,
+    status,
+    professionalId
+  ) => {
+    try {
+      const response = await fetch(
+        `http://localhost:5500/api/events/${eventId}/attendance/${professionalId}`,
+        {
+          method: "PUT",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            status,
+            latitude: null,
+            longitude: null,
+          }),
+        }
+      );
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        alert(data.message || "Unable to mark attendance");
+        return;
+      }
+
+      alert(data.message);
+
+      /*
+      Refresh assigned events
+      */
+
+      const assignedResponse = await fetch(
+        `http://localhost:5500/api/events/professional/${professionalId}`
+      );
+
+      if (assignedResponse.ok) {
+        const assignedData = await assignedResponse.json();
+
+        setAssignedEvents(assignedData);
+      }
+    } catch (error) {
+      console.error("Attendance Error:", error);
+
+      alert("Unable to connect to server");
+    } finally {
+      setAttendanceLoading((previous) => ({
+        ...previous,
+        [eventId]: false,
+      }));
+    }
+  };
+
+  /*
+  =========================================================
   GPS ATTENDANCE
   =========================================================
   */
@@ -288,10 +349,47 @@ function ProfessionalDashboard() {
       return;
     }
 
+    /*
+    Check if attendance is already marked
+    */
+
+    const currentEvent = assignedEvents.find(
+      (event) => event.event_id === eventId
+    );
+
+    if (currentEvent?.attendance_status) {
+      alert(
+        `Attendance is already marked as ${currentEvent.attendance_status}.`
+      );
+      return;
+    }
+
     setAttendanceLoading((previous) => ({
       ...previous,
       [eventId]: true,
     }));
+
+    /*
+    =======================================================
+    ABSENT
+    =======================================================
+    */
+
+    if (status === "absent") {
+      markAttendanceWithoutGPS(
+        eventId,
+        status,
+        storedUser.id
+      );
+
+      return;
+    }
+
+    /*
+    =======================================================
+    PRESENT - GPS REQUIRED
+    =======================================================
+    */
 
     if (!navigator.geolocation) {
       alert("GPS is not supported by this browser");
@@ -1170,46 +1268,69 @@ function ProfessionalDashboard() {
                         {event.staff_status ||
                           "Assigned"}
                       </p>
+
+                      {event.attendance_status && (
+                        <p>
+                          Attendance:{" "}
+                          <strong>
+                            {event.attendance_status ===
+                            "present"
+                              ? "✓ Present"
+                              : "✗ Absent"}
+                          </strong>
+                        </p>
+                      )}
                     </div>
 
                     <div className="button-group">
-                      <button
-                        className="accept-btn"
-                        disabled={
-                          attendanceLoading[
-                            event.event_id
-                          ]
-                        }
-                        onClick={() =>
-                          handleAttendance(
-                            event.event_id,
-                            "present"
-                          )
-                        }
-                      >
-                        {attendanceLoading[
-                          event.event_id
-                        ]
-                          ? "Checking..."
-                          : "Mark Present"}
-                      </button>
+                      {event.attendance_status ? (
+                        <span className="offer-status">
+                          {event.attendance_status ===
+                          "present"
+                            ? "✓ Present"
+                            : "✗ Absent"}
+                        </span>
+                      ) : (
+                        <>
+                          <button
+                            className="accept-btn"
+                            disabled={
+                              attendanceLoading[
+                                event.event_id
+                              ]
+                            }
+                            onClick={() =>
+                              handleAttendance(
+                                event.event_id,
+                                "present"
+                              )
+                            }
+                          >
+                            {attendanceLoading[
+                              event.event_id
+                            ]
+                              ? "Checking..."
+                              : "Mark Present"}
+                          </button>
 
-                      <button
-                        className="reject-btn"
-                        disabled={
-                          attendanceLoading[
-                            event.event_id
-                          ]
-                        }
-                        onClick={() =>
-                          handleAttendance(
-                            event.event_id,
-                            "absent"
-                          )
-                        }
-                      >
-                        Mark Absent
-                      </button>
+                          <button
+                            className="reject-btn"
+                            disabled={
+                              attendanceLoading[
+                                event.event_id
+                              ]
+                            }
+                            onClick={() =>
+                              handleAttendance(
+                                event.event_id,
+                                "absent"
+                              )
+                            }
+                          >
+                            Mark Absent
+                          </button>
+                        </>
+                      )}
                     </div>
                   </div>
                 ))

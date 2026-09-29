@@ -17,4 +17,5 @@ const db = mysql.createPool({
 
 console.log("MySQL Pool Created Successfully");
 
+
 export default db;
