@@ -5,7 +5,6 @@ const router = express.Router();
 
 /* =========================================================
    GET ALL PROFESSIONALS
-   Existing route - DO NOT REMOVE
 ========================================================= */
 
 router.get("/", async (req, res) => {
@@ -14,7 +13,7 @@ router.get("/", async (req, res) => {
       `SELECT id, name, email, created_at
        FROM users
        WHERE role = 'professional'
-       ORDER BY created_at DESC`,
+       ORDER BY created_at DESC`
     );
 
     res.json(professionals);
@@ -56,7 +55,7 @@ router.get("/profile/:userId", async (req, res) => {
          ON u.id = pp.user_id
        WHERE u.id = ?
        AND u.role = 'professional'`,
-      [userId],
+      [userId]
     );
 
     if (profile.length === 0) {
@@ -96,18 +95,16 @@ router.put("/profile/:userId", async (req, res) => {
       bio,
     } = req.body;
 
-    // Update name in users table
     if (name !== undefined) {
       await db.execute(
         `UPDATE users
          SET name = ?
          WHERE id = ?
          AND role = 'professional'`,
-        [name, userId],
+        [name, userId]
       );
     }
 
-    // Create/update professional profile
     await db.execute(
       `INSERT INTO professional_profiles
        (
@@ -141,7 +138,7 @@ router.put("/profile/:userId", async (req, res) => {
         longitude || null,
         availability || "available",
         bio || null,
-      ],
+      ]
     );
 
     res.json({
@@ -158,7 +155,6 @@ router.put("/profile/:userId", async (req, res) => {
 
 /* =========================================================
    GET ALL ORGANIZERS
-   Used by Professional Dashboard → Find Organizers
 ========================================================= */
 
 router.get("/organizers", async (req, res) => {
@@ -178,7 +174,7 @@ router.get("/organizers", async (req, res) => {
        LEFT JOIN organizer_profiles op
          ON u.id = op.user_id
        WHERE u.role = 'organizer'
-       ORDER BY u.created_at DESC`,
+       ORDER BY u.created_at DESC`
     );
 
     res.json(organizers);
@@ -193,7 +189,6 @@ router.get("/organizers", async (req, res) => {
 
 /* =========================================================
    GET PROFESSIONAL'S CONNECTIONS
-   GET /api/professionals/:userId/connections
 ========================================================= */
 
 router.get("/:userId/connections", async (req, res) => {
@@ -241,7 +236,7 @@ router.get("/:userId/connections", async (req, res) => {
          AND cr.status = 'accepted'
 
        ORDER BY cr.created_at DESC`,
-      [userId, userId, userId, userId, userId, userId],
+      [userId, userId, userId, userId, userId, userId]
     );
 
     res.json(connections);
@@ -256,7 +251,6 @@ router.get("/:userId/connections", async (req, res) => {
 
 /* =========================================================
    GET CONNECTION REQUESTS RECEIVED BY PROFESSIONAL
-   GET /api/professionals/:userId/connection-requests
 ========================================================= */
 
 router.get("/:userId/connection-requests", async (req, res) => {
@@ -283,7 +277,7 @@ router.get("/:userId/connection-requests", async (req, res) => {
        AND cr.status = 'pending'
 
        ORDER BY cr.created_at DESC`,
-      [userId],
+      [userId]
     );
 
     res.json(requests);
@@ -298,7 +292,9 @@ router.get("/:userId/connection-requests", async (req, res) => {
 
 /* =========================================================
    GET PROFESSIONAL'S EVENT OFFERS
-   GET /api/professionals/:userId/event-offers
+
+   IMPORTANT:
+   event_staff.id is the unique offer ID.
 ========================================================= */
 
 router.get("/:userId/event-offers", async (req, res) => {
@@ -307,7 +303,9 @@ router.get("/:userId/event-offers", async (req, res) => {
 
     const [offers] = await db.execute(
       `SELECT
+        es.id AS offer_id,
         es.id AS staff_id,
+
         es.event_id,
         es.professional_id,
         es.role AS professional_role,
@@ -343,8 +341,8 @@ router.get("/:userId/event-offers", async (req, res) => {
 
        WHERE es.professional_id = ?
 
-       ORDER BY e.event_date ASC`,
-      [userId],
+       ORDER BY e.event_date ASC, es.id ASC`,
+      [userId]
     );
 
     res.json(offers);
@@ -359,29 +357,53 @@ router.get("/:userId/event-offers", async (req, res) => {
 
 /* =========================================================
    ACCEPT EVENT OFFER
-   PUT /api/professionals/event-offers/:staffId/accept
+
+   PUT
+   /api/professionals/event-offers/:staffId/accept
 ========================================================= */
 
 router.put("/event-offers/:staffId/accept", async (req, res) => {
   try {
     const { staffId } = req.params;
 
-    const [result] = await db.execute(
+    const [staffRows] = await db.execute(
+      `SELECT
+        id,
+        event_id,
+        professional_id,
+        status
+       FROM event_staff
+       WHERE id = ?
+       LIMIT 1`,
+      [staffId]
+    );
+
+    if (staffRows.length === 0) {
+      return res.status(404).json({
+        message: "Event offer not found",
+      });
+    }
+
+    const staff = staffRows[0];
+
+    if (!["applied", "shortlisted"].includes(staff.status)) {
+      return res.status(409).json({
+        message: `Event offer is already ${staff.status}`,
+      });
+    }
+
+    await db.execute(
       `UPDATE event_staff
        SET status = 'confirmed'
        WHERE id = ?
        AND status IN ('applied', 'shortlisted')`,
-      [staffId],
+      [staffId]
     );
-
-    if (result.affectedRows === 0) {
-      return res.status(404).json({
-        message: "Event offer not found or already processed",
-      });
-    }
 
     res.json({
       message: "Event offer accepted successfully",
+      event_id: staff.event_id,
+      staff_id: staff.id,
     });
   } catch (error) {
     console.error("Accept Event Offer Error:", error);
@@ -394,29 +416,52 @@ router.put("/event-offers/:staffId/accept", async (req, res) => {
 
 /* =========================================================
    REJECT EVENT OFFER
-   PUT /api/professionals/event-offers/:staffId/reject
+
+   PUT
+   /api/professionals/event-offers/:staffId/reject
 ========================================================= */
 
 router.put("/event-offers/:staffId/reject", async (req, res) => {
   try {
     const { staffId } = req.params;
 
-    const [result] = await db.execute(
+    const [staffRows] = await db.execute(
+      `SELECT
+        id,
+        event_id,
+        professional_id,
+        status
+       FROM event_staff
+       WHERE id = ?
+       LIMIT 1`,
+      [staffId]
+    );
+
+    if (staffRows.length === 0) {
+      return res.status(404).json({
+        message: "Event offer not found",
+      });
+    }
+
+    const staff = staffRows[0];
+
+    if (!["applied", "shortlisted"].includes(staff.status)) {
+      return res.status(409).json({
+        message: `Event offer is already ${staff.status}`,
+      });
+    }
+
+    await db.execute(
       `UPDATE event_staff
        SET status = 'rejected'
        WHERE id = ?
        AND status IN ('applied', 'shortlisted')`,
-      [staffId],
+      [staffId]
     );
-
-    if (result.affectedRows === 0) {
-      return res.status(404).json({
-        message: "Event offer not found or already processed",
-      });
-    }
 
     res.json({
       message: "Event offer rejected successfully",
+      staff_id: staff.id,
     });
   } catch (error) {
     console.error("Reject Event Offer Error:", error);
@@ -429,7 +474,6 @@ router.put("/event-offers/:staffId/reject", async (req, res) => {
 
 /* =========================================================
    GET PROFESSIONAL'S UPCOMING EVENTS
-   GET /api/professionals/:userId/upcoming-events
 ========================================================= */
 
 router.get("/:userId/upcoming-events", async (req, res) => {
@@ -447,11 +491,14 @@ router.get("/:userId/upcoming-events", async (req, res) => {
         e.start_time,
         e.end_time,
         e.status AS event_status,
+
         es.role AS professional_role,
         es.status AS staff_status,
+
         u.id AS organizer_id,
         u.name AS organizer_name,
         u.email AS organizer_email
+
        FROM event_staff es
 
        JOIN events e
@@ -465,7 +512,7 @@ router.get("/:userId/upcoming-events", async (req, res) => {
        AND e.event_date >= CURDATE()
 
        ORDER BY e.event_date ASC`,
-      [userId],
+      [userId]
     );
 
     res.json(events);

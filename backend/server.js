@@ -9,63 +9,73 @@ import OrganizerRoutes from "./routes/OrganizerRoutes.js";
 import professionalRoutes from "./routes/professionalRoutes.js";
 import connectionRoutes from "./routes/connectionRoutes.js";
 import messageRoutes from "./routes/messageRoutes.js";
-import serviceRoutes from "./routes/serviceRoutes.js";
-import profileRoutes from "./routes/profileRoutes.js";
 
 dotenv.config();
 
 const app = express();
 
 app.use(cors());
+
 app.use(express.json());
 
-// ===============================
-// AUTHENTICATION ROUTES
-// ===============================
+/* =========================================================
+   AUTH
+========================================================= */
+
 app.use("/api/auth", authRoutes);
 
-// ===============================
-// EVENT ROUTES
-// ===============================
+/* =========================================================
+   EVENTS
+========================================================= */
+
 app.use("/api/events", eventRoutes);
 
-// ===============================
-// ADMIN ROUTES
-// ===============================
+/* =========================================================
+   ADMIN
+========================================================= */
+
 app.use("/api/admin", adminRoutes);
 
-// ===============================
-// ORGANIZER ROUTES
-// ===============================
+/* =========================================================
+   ORGANIZERS
+========================================================= */
+
 app.use("/api/organizers", OrganizerRoutes);
 
-// ===============================
-// PROFESSIONAL ROUTES
-// ===============================
+/* =========================================================
+   PROFESSIONALS
+========================================================= */
+
 app.use("/api/professionals", professionalRoutes);
 
-// ===============================
-// CONNECTION ROUTES
-// ===============================
+/* =========================================================
+   CONNECTIONS
+========================================================= */
+
 app.use("/api/connections", connectionRoutes);
 
-//for message routes
+/* =========================================================
+   MESSAGES
+========================================================= */
+
 app.use("/api/messages", messageRoutes);
 
-app.use("/api/services", serviceRoutes);
-
-app.use("/api/profile", profileRoutes);
-// HOME ROUTE
+/* =========================================================
+   HOME
+========================================================= */
 
 app.get("/", (req, res) => {
   res.send("EventSaathi Backend is Running");
 });
 
-// ===============================
-// SERVER
-// ===============================
+/* =========================================================
+   SERVER
+========================================================= */
+
 const PORT = process.env.PORT || 5500;
 
 app.listen(PORT, () => {
-  console.log(`Server running at http://localhost:${PORT}`);
+  console.log(
+    `Server running at http://localhost:${PORT}`
+  );
 });

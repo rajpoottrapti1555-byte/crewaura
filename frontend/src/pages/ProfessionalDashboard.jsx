@@ -6,508 +6,273 @@ function ProfessionalDashboard() {
   const [offers, setOffers] = useState([]);
   const [connections, setConnections] = useState([]);
   const [connectionRequests, setConnectionRequests] = useState([]);
+  const [eventRequests, setEventRequests] = useState([]);
+
   const [upcomingEvents, setUpcomingEvents] = useState([]);
   const [assignedEvents, setAssignedEvents] = useState([]);
+
   const [attendanceLoading, setAttendanceLoading] = useState({});
+  const [attendanceStatus, setAttendanceStatus] = useState({});
 
   const [profile, setProfile] = useState({
-    name: "",
-    email: "",
-    phone: "",
-    skill: "",
-    experience: "",
-    location: "",
+    name: "Professional User",
+    email: "professional@example.com",
+    phone: "+91 9876543210",
+    skill: "Event Management",
+    experience: "2 Years",
+    location: "Bhopal",
   });
 
-  /*
-  =========================================================
-  LOAD PROFESSIONAL DATA
-  =========================================================
-  */
+  const storedUser = JSON.parse(
+    localStorage.getItem("user") || "{}"
+  );
+
+  const userId = storedUser.id;
+
+  // =========================================================
+  // GET EVENT ID
+  // =========================================================
+
+  const getEventId = (event) => {
+    return (
+      event?.event_id ??
+      event?.id ??
+      event?.eventId
+    );
+  };
+
+  // =========================================================
+  // LOAD PROFESSIONAL DATA
+  // =========================================================
 
   useEffect(() => {
     const loadProfessionalData = async () => {
       try {
-        const storedUser = JSON.parse(localStorage.getItem("user"));
-
-        if (!storedUser || !storedUser.id) {
-          console.error("Professional user not found");
+        if (!userId) {
+          console.error("Professional user ID not found");
           return;
         }
 
-        const userId = storedUser.id;
+        // =====================================================
+        // PROFILE
+        // =====================================================
 
-        /*
-        =========================
-        PROFILE
-        =========================
-        */
+        try {
+          const response = await fetch(
+            `http://localhost:5500/api/professionals/profile/${userId}`
+          );
 
-        const profileResponse = await fetch(
-          `http://localhost:5500/api/professionals/profile/${userId}`
-        );
+          if (response.ok) {
+            const data = await response.json();
 
-        if (profileResponse.ok) {
-          const profileData = await profileResponse.json();
-
-          setProfile({
-            name: profileData.name || storedUser.name || "",
-            email: profileData.email || storedUser.email || "",
-            phone: profileData.phone || "",
-            skill: profileData.skills || "",
-            experience: profileData.experience_years
-              ? `${profileData.experience_years} Years`
-              : "0 Years",
-            location: profileData.city || "",
-          });
-        } else {
-          setProfile((previousProfile) => ({
-            ...previousProfile,
-            name: storedUser.name || "",
-            email: storedUser.email || "",
-          }));
-        }
-
-        /*
-        =========================
-        CONNECTIONS
-        =========================
-        */
-
-        const connectionsResponse = await fetch(
-          `http://localhost:5500/api/professionals/${userId}/connections`
-        );
-
-        if (connectionsResponse.ok) {
-          const connectionsData = await connectionsResponse.json();
-
-          setConnections(
-            connectionsData.map((connection) => ({
-              id: connection.connection_id || connection.id,
-              name: connection.name || "Organizer",
-              company:
-                connection.organization_name ||
-                connection.company ||
-                connection.name ||
-                "Event Organizer",
+            setProfile({
+              name: data.name || "Professional User",
+              email: data.email || "",
+              phone: data.phone || "",
+              skill:
+                data.skill ||
+                data.skills ||
+                "Event Management",
+              experience:
+                data.experience ||
+                data.experience_years ||
+                "2 Years",
               location:
-                connection.city ||
-                connection.location ||
-                "",
-            }))
+                data.location ||
+                data.city ||
+                "Bhopal",
+            });
+          }
+        } catch (error) {
+          console.error(
+            "Profile loading error:",
+            error
           );
         }
 
-        /*
-        =========================
-        CONNECTION REQUESTS
-        =========================
-        */
+        // =====================================================
+        // CONNECTIONS
+        // =====================================================
 
-        const requestsResponse = await fetch(
-          `http://localhost:5500/api/professionals/${userId}/connection-requests`
-        );
+        try {
+          const response = await fetch(
+            `http://localhost:5500/api/professionals/${userId}/connections`
+          );
 
-        if (requestsResponse.ok) {
-          const requestsData = await requestsResponse.json();
-
-          setConnectionRequests(requestsData);
-        }
-
-        /*
-        =========================
-        EVENT OFFERS
-        =========================
-        */
-
-        const offersResponse = await fetch(
-          `http://localhost:5500/api/professionals/${userId}/event-offers`
-        );
-
-        if (offersResponse.ok) {
-          const offersData = await offersResponse.json();
-
-          setOffers(
-            offersData.map((offer) => ({
-              id: offer.staff_id,
-              event: offer.title || "Event",
-              organizer:
-                offer.organization_name ||
-                offer.organizer_name ||
-                "Event Organizer",
-              location: offer.location || "",
-              date: offer.event_date
-                ? new Date(offer.event_date).toLocaleDateString(
-                    "en-IN",
-                    {
-                      day: "numeric",
-                      month: "long",
-                      year: "numeric",
-                    }
-                  )
-                : "",
-              role: offer.professional_role || "Event Staff",
-              status:
-                offer.offer_status === "confirmed"
-                  ? "Accepted"
-                  : offer.offer_status === "rejected"
-                  ? "Rejected"
-                  : "Pending",
-            }))
+          if (response.ok) {
+            const data = await response.json();
+            setConnections(data);
+          }
+        } catch (error) {
+          console.error(
+            "Connections loading error:",
+            error
           );
         }
 
-        /*
-        =========================
-        UPCOMING EVENTS
-        =========================
-        */
+        // =====================================================
+        // CONNECTION REQUESTS
+        // =====================================================
 
-        const upcomingResponse = await fetch(
-          `http://localhost:5500/api/professionals/${userId}/upcoming-events`
-        );
+        try {
+          const response = await fetch(
+            `http://localhost:5500/api/professionals/${userId}/connection-requests`
+          );
 
-        if (upcomingResponse.ok) {
-          const upcomingData = await upcomingResponse.json();
-
-          setUpcomingEvents(upcomingData);
-
-          console.log("Upcoming Events:", upcomingData);
+          if (response.ok) {
+            const data = await response.json();
+            setConnectionRequests(data);
+          }
+        } catch (error) {
+          console.error(
+            "Connection requests loading error:",
+            error
+          );
         }
 
-        /*
-        =========================
-        ALL ASSIGNED EVENTS
-        =========================
-        */
+        // =====================================================
+        // EVENT REQUESTS
+        // =====================================================
 
-        const assignedResponse = await fetch(
-          `http://localhost:5500/api/events/professional/${userId}`
-        );
+        try {
+          const response = await fetch(
+            `http://localhost:5500/api/events/professional/${userId}/event-requests`
+          );
 
-        if (assignedResponse.ok) {
-          const assignedData = await assignedResponse.json();
+          if (response.ok) {
+            const data = await response.json();
+            setEventRequests(data);
+          } else {
+            console.error(
+              "Event requests API error:",
+              response.status
+            );
+          }
+        } catch (error) {
+          console.error(
+            "Event requests loading error:",
+            error
+          );
+        }
 
-          setAssignedEvents(assignedData);
+        // =====================================================
+        // EVENT OFFERS
+        // =====================================================
 
-          console.log("Assigned Events:", assignedData);
+        try {
+          const response = await fetch(
+            `http://localhost:5500/api/professionals/${userId}/event-offers`
+          );
+
+          if (response.ok) {
+            const data = await response.json();
+
+            console.log(
+              "Event Offers:",
+              data
+            );
+
+            setOffers(data);
+          }
+        } catch (error) {
+          console.error(
+            "Offers loading error:",
+            error
+          );
+        }
+
+        // =====================================================
+        // UPCOMING EVENTS
+        // =====================================================
+
+        try {
+          const response = await fetch(
+            `http://localhost:5500/api/professionals/${userId}/upcoming-events`
+          );
+
+          if (response.ok) {
+            const data = await response.json();
+            setUpcomingEvents(data);
+          }
+        } catch (error) {
+          console.error(
+            "Upcoming events loading error:",
+            error
+          );
+        }
+
+        // =====================================================
+        // MY EVENTS
+        // =====================================================
+
+        try {
+          const response = await fetch(
+            `http://localhost:5500/api/events/professional/${userId}`
+          );
+
+          if (response.ok) {
+            const data = await response.json();
+
+            setAssignedEvents(data);
+
+            const attendanceMap = {};
+
+            data.forEach((event) => {
+              const eventId =
+                getEventId(event);
+
+              if (
+                event.attendance_status ===
+                  "present" &&
+                eventId
+              ) {
+                attendanceMap[eventId] =
+                  "present";
+              }
+            });
+
+            setAttendanceStatus(
+              attendanceMap
+            );
+
+            console.log(
+              "Assigned Events:",
+              data
+            );
+
+            console.log(
+              "Attendance Status:",
+              attendanceMap
+            );
+          }
+        } catch (error) {
+          console.error(
+            "Assigned events loading error:",
+            error
+          );
         }
       } catch (error) {
-        console.error("Error loading professional data:", error);
+        console.error(
+          "Error loading professional data:",
+          error
+        );
       }
     };
 
     loadProfessionalData();
-  }, []);
+  }, [userId]);
 
-  /*
-  =========================================================
-  ACCEPT / REJECT EVENT OFFER
-  =========================================================
-  */
+  // =========================================================
+  // EVENT REQUEST ACCEPT / REJECT
+  // =========================================================
 
-  const handleOffer = async (id, status) => {
-    try {
-      const action = status === "Accepted" ? "accept" : "reject";
-
-      const response = await fetch(
-        `http://localhost:5500/api/professionals/event-offers/${id}/${action}`,
-        {
-          method: "PUT",
-          headers: {
-            "Content-Type": "application/json",
-          },
-        }
-      );
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        alert(data.message || "Unable to update event offer");
-        return;
-      }
-
-      setOffers((previousOffers) =>
-        previousOffers.map((offer) =>
-          offer.id === id
-            ? {
-                ...offer,
-                status,
-              }
-            : offer
-        )
-      );
-
-      const storedUser = JSON.parse(localStorage.getItem("user"));
-
-      if (storedUser?.id) {
-        const upcomingResponse = await fetch(
-          `http://localhost:5500/api/professionals/${storedUser.id}/upcoming-events`
-        );
-
-        if (upcomingResponse.ok) {
-          const upcomingData = await upcomingResponse.json();
-
-          setUpcomingEvents(upcomingData);
-        }
-
-        const assignedResponse = await fetch(
-          `http://localhost:5500/api/events/professional/${storedUser.id}`
-        );
-
-        if (assignedResponse.ok) {
-          const assignedData = await assignedResponse.json();
-
-          setAssignedEvents(assignedData);
-        }
-      }
-
-      alert(
-        status === "Accepted"
-          ? "Event offer accepted!"
-          : "Event offer rejected!"
-      );
-    } catch (error) {
-      console.error("Offer update error:", error);
-
-      alert("Unable to connect to server");
-    }
-  };
-
-  /*
-  =========================================================
-  MARK ABSENT WITHOUT GPS
-  =========================================================
-  */
-
-  const markAttendanceWithoutGPS = async (
-    eventId,
-    status,
-    professionalId
+  const handleEventRequest = async (
+    requestId,
+    action
   ) => {
     try {
       const response = await fetch(
-        `http://localhost:5500/api/events/${eventId}/attendance/${professionalId}`,
-        {
-          method: "PUT",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            status,
-            latitude: null,
-            longitude: null,
-          }),
-        }
-      );
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        alert(data.message || "Unable to mark attendance");
-        return;
-      }
-
-      alert(data.message);
-
-      /*
-      Refresh assigned events
-      */
-
-      const assignedResponse = await fetch(
-        `http://localhost:5500/api/events/professional/${professionalId}`
-      );
-
-      if (assignedResponse.ok) {
-        const assignedData = await assignedResponse.json();
-
-        setAssignedEvents(assignedData);
-      }
-    } catch (error) {
-      console.error("Attendance Error:", error);
-
-      alert("Unable to connect to server");
-    } finally {
-      setAttendanceLoading((previous) => ({
-        ...previous,
-        [eventId]: false,
-      }));
-    }
-  };
-
-  /*
-  =========================================================
-  GPS ATTENDANCE
-  =========================================================
-  */
-
-  const handleAttendance = (eventId, status) => {
-    const storedUser = JSON.parse(localStorage.getItem("user"));
-
-    if (!storedUser || !storedUser.id) {
-      alert("Professional information not found");
-      return;
-    }
-
-    /*
-    Check if attendance is already marked
-    */
-
-    const currentEvent = assignedEvents.find(
-      (event) => event.event_id === eventId
-    );
-
-    if (currentEvent?.attendance_status) {
-      alert(
-        `Attendance is already marked as ${currentEvent.attendance_status}.`
-      );
-      return;
-    }
-
-    setAttendanceLoading((previous) => ({
-      ...previous,
-      [eventId]: true,
-    }));
-
-    /*
-    =======================================================
-    ABSENT
-    =======================================================
-    */
-
-    if (status === "absent") {
-      markAttendanceWithoutGPS(
-        eventId,
-        status,
-        storedUser.id
-      );
-
-      return;
-    }
-
-    /*
-    =======================================================
-    PRESENT - GPS REQUIRED
-    =======================================================
-    */
-
-    if (!navigator.geolocation) {
-      alert("GPS is not supported by this browser");
-
-      setAttendanceLoading((previous) => ({
-        ...previous,
-        [eventId]: false,
-      }));
-
-      return;
-    }
-
-    navigator.geolocation.getCurrentPosition(
-      async (position) => {
-        try {
-          const latitude = position.coords.latitude;
-          const longitude = position.coords.longitude;
-
-          const response = await fetch(
-            `http://localhost:5500/api/events/${eventId}/attendance/${storedUser.id}`,
-            {
-              method: "PUT",
-              headers: {
-                "Content-Type": "application/json",
-              },
-              body: JSON.stringify({
-                status,
-                latitude,
-                longitude,
-              }),
-            }
-          );
-
-          const data = await response.json();
-
-          if (!response.ok) {
-            alert(data.message || "Unable to mark attendance");
-            return;
-          }
-
-          alert(
-            `${data.message}${
-              data.distance !== undefined
-                ? ` Distance: ${data.distance} meters`
-                : ""
-            }`
-          );
-
-          /*
-          Refresh assigned events
-          */
-
-          const assignedResponse = await fetch(
-            `http://localhost:5500/api/events/professional/${storedUser.id}`
-          );
-
-          if (assignedResponse.ok) {
-            const assignedData = await assignedResponse.json();
-
-            setAssignedEvents(assignedData);
-          }
-        } catch (error) {
-          console.error("Attendance Error:", error);
-
-          alert("Unable to connect to server");
-        } finally {
-          setAttendanceLoading((previous) => ({
-            ...previous,
-            [eventId]: false,
-          }));
-        }
-      },
-      (error) => {
-        console.error("GPS Error:", error);
-
-        let message = "Unable to get your location.";
-
-        if (error.code === 1) {
-          message =
-            "Location permission denied. Please allow location access.";
-        } else if (error.code === 2) {
-          message =
-            "Your location could not be determined.";
-        } else if (error.code === 3) {
-          message =
-            "Location request timed out. Please try again.";
-        }
-
-        alert(message);
-
-        setAttendanceLoading((previous) => ({
-          ...previous,
-          [eventId]: false,
-        }));
-      },
-      {
-        enableHighAccuracy: true,
-        timeout: 10000,
-        maximumAge: 0,
-      }
-    );
-  };
-
-  /*
-  =========================================================
-  ACCEPT / REJECT CONNECTION REQUEST
-  =========================================================
-  */
-
-  const handleConnectionRequest = async (requestId, action) => {
-    try {
-      if (!requestId) {
-        alert("Invalid connection request");
-        return;
-      }
-
-      const response = await fetch(
-        `http://localhost:5500/api/connections/${requestId}/${action}`,
+        `http://localhost:5500/api/events/event-requests/${requestId}/${action}`,
         {
           method: "PUT",
           headers: {
@@ -520,493 +285,1017 @@ function ProfessionalDashboard() {
 
       if (!response.ok) {
         alert(
-          data.message || "Unable to update connection request"
+          data.message ||
+            "Unable to process event request."
         );
         return;
       }
 
-      setConnectionRequests((previousRequests) =>
-        previousRequests.filter(
-          (request) =>
-            (request.id || request.request_id) !== requestId
-        )
-      );
+      if (action === "accept") {
+        alert(
+          "Event request accepted! Event added to My Events."
+        );
+      } else {
+        alert(
+          "Event request rejected."
+        );
+      }
 
-      const storedUser = JSON.parse(localStorage.getItem("user"));
-
-      if (storedUser?.id) {
-        const connectionsResponse = await fetch(
-          `http://localhost:5500/api/professionals/${storedUser.id}/connections`
+      const requestsResponse =
+        await fetch(
+          `http://localhost:5500/api/events/professional/${userId}/event-requests`
         );
 
-        if (connectionsResponse.ok) {
-          const connectionsData =
-            await connectionsResponse.json();
+      if (requestsResponse.ok) {
+        const requestsData =
+          await requestsResponse.json();
 
-          setConnections(
-            connectionsData.map((connection) => ({
-              id:
-                connection.connection_id ||
-                connection.id,
+        setEventRequests(
+          requestsData
+        );
+      }
 
-              name:
-                connection.name ||
-                "Organizer",
+      if (action === "accept") {
+        const eventsResponse =
+          await fetch(
+            `http://localhost:5500/api/events/professional/${userId}`
+          );
 
-              company:
-                connection.organization_name ||
-                connection.company ||
-                connection.name ||
-                "Event Organizer",
+        if (eventsResponse.ok) {
+          const eventsData =
+            await eventsResponse.json();
 
-              location:
-                connection.city ||
-                connection.location ||
-                "",
-            }))
+          setAssignedEvents(
+            eventsData
+          );
+
+          const attendanceMap = {};
+
+          eventsData.forEach(
+            (event) => {
+              const eventId =
+                getEventId(event);
+
+              if (
+                event.attendance_status ===
+                  "present" &&
+                eventId
+              ) {
+                attendanceMap[
+                  eventId
+                ] = "present";
+              }
+            }
+          );
+
+          setAttendanceStatus(
+            attendanceMap
           );
         }
+
+        const upcomingResponse =
+          await fetch(
+            `http://localhost:5500/api/professionals/${userId}/upcoming-events`
+          );
+
+        if (upcomingResponse.ok) {
+          const upcomingData =
+            await upcomingResponse.json();
+
+          setUpcomingEvents(
+            upcomingData
+          );
+        }
+      }
+    } catch (error) {
+      console.error(
+        "Event request action error:",
+        error
+      );
+
+      alert(
+        "Unable to process event request."
+      );
+    }
+  };
+
+  // =========================================================
+  // NORMAL CONNECTION REQUEST
+  // =========================================================
+
+  const handleConnectionRequest = async (
+    requestId,
+    action
+  ) => {
+    try {
+      const response = await fetch(
+        `http://localhost:5500/api/professionals/connection-requests/${requestId}/${action}`,
+        {
+          method: "PUT",
+          headers: {
+            "Content-Type": "application/json",
+          },
+        }
+      );
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        alert(
+          data.message ||
+            "Unable to process request."
+        );
+        return;
       }
 
       alert(
         action === "accept"
-          ? "Connection request accepted!"
-          : "Connection request rejected!"
+          ? "Connection request accepted."
+          : "Connection request rejected."
       );
+
+      const requestsResponse =
+        await fetch(
+          `http://localhost:5500/api/professionals/${userId}/connection-requests`
+        );
+
+      if (requestsResponse.ok) {
+        const requestsData =
+          await requestsResponse.json();
+
+        setConnectionRequests(
+          requestsData
+        );
+      }
+
+      const connectionsResponse =
+        await fetch(
+          `http://localhost:5500/api/professionals/${userId}/connections`
+        );
+
+      if (connectionsResponse.ok) {
+        const connectionsData =
+          await connectionsResponse.json();
+
+        setConnections(
+          connectionsData
+        );
+      }
     } catch (error) {
       console.error(
         "Connection request error:",
         error
       );
 
-      alert("Unable to connect to server");
+      alert(
+        "Unable to process connection request."
+      );
     }
   };
 
-  /*
-  =========================================================
-  RENDER SECTION
-  =========================================================
-  */
+  // =========================================================
+  // GPS ATTENDANCE
+  // =========================================================
+
+  const handleAttendance = async (
+    event
+  ) => {
+    const eventId =
+      getEventId(event);
+
+    console.log(
+      "Attendance Event:",
+      event
+    );
+
+    console.log(
+      "Attendance Event ID:",
+      eventId
+    );
+
+    if (!eventId) {
+      alert(
+        "Event ID is missing."
+      );
+      return;
+    }
+
+    if (
+      !navigator.geolocation
+    ) {
+      alert(
+        "Geolocation is not supported by your browser."
+      );
+      return;
+    }
+
+    setAttendanceLoading(
+      (previous) => ({
+        ...previous,
+        [eventId]: true,
+      })
+    );
+
+    navigator.geolocation.getCurrentPosition(
+      async (position) => {
+        try {
+          const latitude =
+            position.coords.latitude;
+
+          const longitude =
+            position.coords.longitude;
+
+          const eventLatitude =
+            Number(event.latitude);
+
+          const eventLongitude =
+            Number(event.longitude);
+
+          if (
+            Number.isNaN(
+              eventLatitude
+            ) ||
+            Number.isNaN(
+              eventLongitude
+            )
+          ) {
+            alert(
+              "Event location coordinates are not available."
+            );
+            return;
+          }
+
+          // ---------------------------------------------------
+          // DISTANCE CALCULATION
+          // ---------------------------------------------------
+
+          const toRadians =
+            (value) =>
+              (value * Math.PI) /
+              180;
+
+          const R = 6371000;
+
+          const dLat =
+            toRadians(
+              latitude -
+                eventLatitude
+            );
+
+          const dLon =
+            toRadians(
+              longitude -
+                eventLongitude
+            );
+
+          const a =
+            Math.sin(
+              dLat / 2
+            ) *
+              Math.sin(
+                dLat / 2
+              ) +
+            Math.cos(
+              toRadians(
+                eventLatitude
+              )
+            ) *
+              Math.cos(
+                toRadians(
+                  latitude
+                )
+              ) *
+              Math.sin(
+                dLon / 2
+              ) *
+              Math.sin(
+                dLon / 2
+              );
+
+          const c =
+            2 *
+            Math.atan2(
+              Math.sqrt(a),
+              Math.sqrt(1 - a)
+            );
+
+          const distance =
+            R * c;
+
+          console.log(
+            "User Latitude:",
+            latitude
+          );
+
+          console.log(
+            "User Longitude:",
+            longitude
+          );
+
+          console.log(
+            "Event Latitude:",
+            eventLatitude
+          );
+
+          console.log(
+            "Event Longitude:",
+            eventLongitude
+          );
+
+          console.log(
+            "Distance:",
+            distance
+          );
+
+          // ---------------------------------------------------
+          // 200 METERS LIMIT
+          // ---------------------------------------------------
+
+          if (
+            distance > 200
+          ) {
+            alert(
+              `You are ${Math.round(
+                distance
+              )} meters away from the event location. You must be within 200 meters to mark attendance.`
+            );
+
+            return;
+          }
+
+          // ---------------------------------------------------
+          // CHECK-IN
+          // ---------------------------------------------------
+
+          const response =
+            await fetch(
+              `http://localhost:5500/api/events/${eventId}/attendance/check-in`,
+              {
+                method: "POST",
+                headers: {
+                  "Content-Type":
+                    "application/json",
+                },
+                body: JSON.stringify(
+                  {
+                    professional_id:
+                      userId,
+                    latitude,
+                    longitude,
+                  }
+                ),
+              }
+            );
+
+          const data =
+            await response.json();
+
+          if (!response.ok) {
+            alert(
+              data.message ||
+                "Unable to mark attendance."
+            );
+            return;
+          }
+
+          alert(
+            "Attendance marked successfully!"
+          );
+
+          setAttendanceStatus(
+            (previous) => ({
+              ...previous,
+              [eventId]:
+                "present",
+            })
+          );
+
+          const assignedResponse =
+            await fetch(
+              `http://localhost:5500/api/events/professional/${userId}`
+            );
+
+          if (
+            assignedResponse.ok
+          ) {
+            const assignedData =
+              await assignedResponse.json();
+
+            setAssignedEvents(
+              assignedData
+            );
+          }
+        } catch (error) {
+          console.error(
+            "Attendance error:",
+            error
+          );
+
+          alert(
+            "Unable to mark attendance."
+          );
+        } finally {
+          setAttendanceLoading(
+            (previous) => ({
+              ...previous,
+              [eventId]:
+                false,
+            })
+          );
+        }
+      },
+
+      (error) => {
+        console.error(
+          "GPS error:",
+          error
+        );
+
+        setAttendanceLoading(
+          (previous) => ({
+            ...previous,
+            [eventId]:
+              false,
+          })
+        );
+
+        alert(
+          "Unable to access your location. Please allow location permission."
+        );
+      },
+
+      {
+        enableHighAccuracy: true,
+        timeout: 10000,
+        maximumAge: 0,
+      }
+    );
+  };
+
+  // =========================================================
+  // HANDLE EVENT OFFER
+  // =========================================================
+
+  const handleOffer = async (
+    offer,
+    action
+  ) => {
+    try {
+      const offerId =
+        offer?.staff_id ??
+        offer?.offer_id ??
+        offer?.id ??
+        offer?.event_offer_id;
+
+      if (!offerId) {
+        alert("Offer ID is missing.");
+        return;
+      }
+
+      console.log(
+        "Selected Offer:",
+        offer
+      );
+
+      console.log(
+        "Offer ID:",
+        offerId
+      );
+
+      const response = await fetch(
+        `http://localhost:5500/api/professionals/event-offers/${offerId}/${action}`,
+        {
+          method: "PUT",
+          headers: {
+            "Content-Type":
+              "application/json",
+          },
+        }
+      );
+
+      const data =
+        await response.json();
+
+      if (!response.ok) {
+        alert(
+          data.message ||
+            `Unable to ${action} event offer.`
+        );
+        return;
+      }
+
+      if (action === "accept") {
+        alert(
+          "Event offer accepted! Event added to My Events."
+        );
+      } else {
+        alert(
+          "Event offer rejected."
+        );
+      }
+
+      // =====================================================
+      // REFRESH EVENT OFFERS
+      // =====================================================
+
+      const offersResponse =
+        await fetch(
+          `http://localhost:5500/api/professionals/${userId}/event-offers`
+        );
+
+      if (offersResponse.ok) {
+        const offersData =
+          await offersResponse.json();
+
+        setOffers(offersData);
+      }
+
+      // =====================================================
+      // REFRESH MY EVENTS
+      // =====================================================
+
+      const eventsResponse =
+        await fetch(
+          `http://localhost:5500/api/events/professional/${userId}`
+        );
+
+      if (eventsResponse.ok) {
+        const eventsData =
+          await eventsResponse.json();
+
+        setAssignedEvents(
+          eventsData
+        );
+
+        const attendanceMap = {};
+
+        eventsData.forEach(
+          (event) => {
+            const eventId =
+              getEventId(event);
+
+            if (
+              event.attendance_status ===
+                "present" &&
+              eventId
+            ) {
+              attendanceMap[
+                eventId
+              ] = "present";
+            }
+          }
+        );
+
+        setAttendanceStatus(
+          attendanceMap
+        );
+      }
+
+      // =====================================================
+      // REFRESH UPCOMING EVENTS
+      // =====================================================
+
+      const upcomingResponse =
+        await fetch(
+          `http://localhost:5500/api/professionals/${userId}/upcoming-events`
+        );
+
+      if (upcomingResponse.ok) {
+        const upcomingData =
+          await upcomingResponse.json();
+
+        setUpcomingEvents(
+          upcomingData
+        );
+      }
+    } catch (error) {
+      console.error(
+        "Event offer action error:",
+        error
+      );
+
+      alert(
+        "Unable to process event offer."
+      );
+    }
+  };
+
+  // =========================================================
+  // RENDER SECTION
+  // =========================================================
 
   const renderSection = () => {
     switch (activeSection) {
 
-      /*
-      =====================================================
-      DASHBOARD
-      =====================================================
-      */
+      // =====================================================
+      // DASHBOARD
+      // =====================================================
 
       case "dashboard":
         return (
           <div className="professional-content">
-            <h1>Professional Dashboard</h1>
+
+            <h1>
+              Professional Dashboard
+            </h1>
 
             <p className="welcome-text">
-              Welcome back, {profile.name || "Professional"} 👋
+              Welcome back,{" "}
+              {profile.name} 👋
             </p>
 
             <div className="stats-grid">
+
               <div className="stat-card">
-                <h3>Upcoming Events</h3>
-                <h2>{upcomingEvents.length}</h2>
-                <p>Events scheduled</p>
+                <h3>
+                  Upcoming Events
+                </h3>
+
+                <h2>
+                  {upcomingEvents.length}
+                </h2>
+
+                <p>
+                  Events scheduled
+                </p>
               </div>
 
               <div className="stat-card">
-                <h3>Event Offers</h3>
-                <h2>{offers.length}</h2>
-                <p>Offers received</p>
+                <h3>
+                  Event Offers
+                </h3>
+
+                <h2>
+                  {offers.length}
+                </h2>
+
+                <p>
+                  Offers received
+                </p>
               </div>
 
               <div className="stat-card">
-                <h3>My Organizers</h3>
-                <h2>{connections.length}</h2>
-                <p>Connected organizers</p>
+                <h3>
+                  My Organizers
+                </h3>
+
+                <h2>
+                  {connections.length}
+                </h2>
+
+                <p>
+                  Connected organizers
+                </p>
               </div>
 
               <div className="stat-card">
-                <h3>Experience</h3>
-                <h2>{profile.experience || "0 Years"}</h2>
-                <p>Professional experience</p>
+                <h3>
+                  Event Requests
+                </h3>
+
+                <h2>
+                  {
+                    eventRequests.filter(
+                      (request) =>
+                        request.status ===
+                        "pending"
+                    ).length
+                  }
+                </h2>
+
+                <p>
+                  Pending requests
+                </p>
               </div>
+
             </div>
 
             <div className="dashboard-card">
-              <h2>Upcoming Events</h2>
 
-              {upcomingEvents.length === 0 ? (
-                <div className="event-item">
-                  <div>
-                    <h3>No upcoming events</h3>
-                    <p>
-                      No confirmed events are currently scheduled.
-                    </p>
-                  </div>
+              <h2>
+                Upcoming Events
+              </h2>
 
-                  <span className="event-status">None</span>
-                </div>
+              {upcomingEvents.length ===
+              0 ? (
+                <p>
+                  No upcoming events.
+                </p>
               ) : (
-                upcomingEvents.slice(0, 3).map((event) => (
-                  <div
-                    className="event-item"
-                    key={event.staff_id || event.id}
-                  >
-                    <div>
-                      <h3>{event.title}</h3>
+                upcomingEvents
+                  .slice(0, 3)
+                  .map(
+                    (
+                      event,
+                      index
+                    ) => (
+                      <div
+                        className="event-item"
+                        key={
+                          getEventId(
+                            event
+                          ) ||
+                          index
+                        }
+                      >
 
-                      <p>
-                        Organizer:{" "}
-                        {event.organization_name ||
-                          event.organizer_name ||
-                          "Organizer"}
-                      </p>
+                        <div>
 
-                      <p>
-                        📍{" "}
-                        {event.location ||
-                          "Location not available"}
-                      </p>
+                          <h3>
+                            {event.title ||
+                              event.event_title}
+                          </h3>
 
-                      <p>
-                        📅{" "}
-                        {event.event_date
-                          ? new Date(
+                          <p>
+                            📍{" "}
+                            {
+                              event.location
+                            }
+                          </p>
+
+                          <p>
+                            📅{" "}
+                            {
                               event.event_date
-                            ).toLocaleDateString("en-IN", {
-                              day: "numeric",
-                              month: "long",
-                              year: "numeric",
-                            })
-                          : "Date not available"}
-                      </p>
-                    </div>
+                            }
+                          </p>
 
-                    <span className="event-status">
-                      Confirmed
-                    </span>
-                  </div>
-                ))
+                        </div>
+
+                        <span className="event-status">
+                          Confirmed
+                        </span>
+
+                      </div>
+                    )
+                  )
               )}
+
             </div>
+
           </div>
         );
 
-      /*
-      =====================================================
-      PROFILE
-      =====================================================
-      */
+      // =====================================================
+      // PROFILE
+      // =====================================================
 
       case "profile":
         return (
           <div className="professional-content">
-            <h1>My Profile</h1>
+
+            <h1>
+              My Profile
+            </h1>
 
             <div className="profile-card">
+
               <div className="profile-avatar">
                 {profile.name
-                  ? profile.name.charAt(0).toUpperCase()
+                  ? profile.name.charAt(0)
                   : "P"}
               </div>
 
               <h2>
-                {profile.name || "Professional User"}
+                {profile.name}
               </h2>
 
-              <p>Professional / Event Worker</p>
+              <p>
+                Professional / Event Worker
+              </p>
 
               <div className="profile-details">
+
                 <p>
-                  <strong>Email:</strong>{" "}
-                  {profile.email || "Not available"}
+                  <strong>
+                    Email:
+                  </strong>{" "}
+                  {profile.email}
                 </p>
 
                 <p>
-                  <strong>Phone:</strong>{" "}
-                  {profile.phone || "Not available"}
+                  <strong>
+                    Phone:
+                  </strong>{" "}
+                  {profile.phone}
                 </p>
 
                 <p>
-                  <strong>Skill:</strong>{" "}
-                  {profile.skill || "Not available"}
+                  <strong>
+                    Skill:
+                  </strong>{" "}
+                  {profile.skill}
                 </p>
 
                 <p>
-                  <strong>Experience:</strong>{" "}
-                  {profile.experience || "0 Years"}
+                  <strong>
+                    Experience:
+                  </strong>{" "}
+                  {profile.experience}
                 </p>
 
                 <p>
-                  <strong>Location:</strong>{" "}
-                  {profile.location || "Not available"}
+                  <strong>
+                    Location:
+                  </strong>{" "}
+                  {profile.location}
                 </p>
+
               </div>
 
               <button className="primary-btn">
                 Edit Profile
               </button>
+
             </div>
+
           </div>
         );
 
-      /*
-      =====================================================
-      FIND ORGANIZERS
-      =====================================================
-      */
+      // =====================================================
+      // FIND ORGANIZERS
+      // =====================================================
 
       case "organizers":
         return (
           <div className="professional-content">
-            <h1>Find Organizers</h1>
+
+            <h1>
+              Find Organizers
+            </h1>
 
             <p className="section-description">
-              Connect with event organizers and get more
-              opportunities.
+              Connect with event organizers
+              and get more opportunities.
             </p>
 
-            {connections.length === 0 ? (
-              <div className="dashboard-card">
-                <h3>No organizers connected yet</h3>
+            <div className="organizer-grid">
 
+              {connections.length ===
+              0 ? (
                 <p>
-                  Organizers you connect with will appear here.
+                  No organizers found.
                 </p>
-              </div>
-            ) : (
-              <div className="organizer-grid">
-                {connections.map((organizer) => (
-                  <div
-                    className="organizer-card"
-                    key={organizer.id}
-                  >
-                    <div className="organizer-avatar">
-                      {organizer.name
-                        ? organizer.name
-                            .charAt(0)
-                            .toUpperCase()
-                        : "O"}
+              ) : (
+                connections.map(
+                  (organizer) => (
+                    <div
+                      className="organizer-card"
+                      key={
+                        organizer.id
+                      }
+                    >
+
+                      <div className="organizer-avatar">
+                        {(
+                          organizer.name ||
+                          "O"
+                        ).charAt(0)}
+                      </div>
+
+                      <h3>
+                        {organizer.name}
+                      </h3>
+
+                      <p>
+                        {organizer.company ||
+                          organizer.organization ||
+                          "Event Organizer"}
+                      </p>
+
+                      <p>
+                        📍{" "}
+                        {organizer.location ||
+                          "Location not available"}
+                      </p>
+
+                      <button className="primary-btn">
+                        View Profile
+                      </button>
+
                     </div>
+                  )
+                )
+              )}
 
-                    <h3>{organizer.name}</h3>
+            </div>
 
-                    <p>{organizer.company}</p>
-
-                    <p>
-                      📍{" "}
-                      {organizer.location ||
-                        "Location not available"}
-                    </p>
-
-                    <button className="primary-btn">
-                      View Profile
-                    </button>
-                  </div>
-                ))}
-              </div>
-            )}
           </div>
         );
 
-      /*
-      =====================================================
-      CONNECTION REQUESTS
-      =====================================================
-      */
+      // =====================================================
+      // CONNECTION REQUESTS + EVENT REQUESTS
+      // =====================================================
 
       case "requests":
         return (
           <div className="professional-content">
-            <h1>Connection Requests</h1>
 
-            {connectionRequests.length === 0 ? (
-              <div className="dashboard-card">
-                <h3>No connection requests</h3>
+            <h1>
+              Connection Requests
+            </h1>
 
+            <div className="dashboard-card">
+
+              <h2>
+                Event Requests
+              </h2>
+
+              {eventRequests.length ===
+              0 ? (
                 <p>
-                  New organizer connection requests will appear
-                  here.
+                  No event requests available.
                 </p>
-              </div>
-            ) : (
-              <div className="dashboard-card">
-                {connectionRequests.map((request) => (
-                  <div
-                    className="request-item"
-                    key={
-                      request.id ||
-                      request.request_id
-                    }
-                  >
-                    <div>
-                      <h3>
-                        {request.name ||
-                          request.sender_name ||
-                          "Organizer"}
-                      </h3>
+              ) : (
+                eventRequests.map(
+                  (request) => (
+                    <div
+                      className="request-item"
+                      key={
+                        request.request_id
+                      }
+                    >
 
-                      <p>
-                        wants to connect with you.
-                      </p>
-                    </div>
+                      <div>
 
-                    <div className="button-group">
-                      <button
-                        className="accept-btn"
-                        onClick={() =>
-                          handleConnectionRequest(
-                            request.id ||
-                              request.request_id,
-                            "accept"
-                          )
-                        }
-                      >
-                        Accept
-                      </button>
+                        <h3>
+                          {
+                            request.event_title
+                          }
+                        </h3>
 
-                      <button
-                        className="reject-btn"
-                        onClick={() =>
-                          handleConnectionRequest(
-                            request.id ||
-                              request.request_id,
-                            "reject"
-                          )
-                        }
-                      >
-                        Reject
-                      </button>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-        );
+                        <p>
+                          <strong>
+                            Organizer:
+                          </strong>{" "}
+                          {
+                            request.organizer_name
+                          }
+                        </p>
 
-      /*
-      =====================================================
-      MY ORGANIZERS
-      =====================================================
-      */
+                        <p>
+                          <strong>
+                            Location:
+                          </strong>{" "}
+                          {
+                            request.event_location
+                          }
+                        </p>
 
-      case "my-organizers":
-        return (
-          <div className="professional-content">
-            <h1>My Organizers</h1>
+                        <p>
+                          <strong>
+                            Date:
+                          </strong>{" "}
+                          {
+                            request.event_date
+                          }
+                        </p>
 
-            {connections.length === 0 ? (
-              <div className="dashboard-card">
-                <h3>No organizers yet</h3>
+                        <p>
+                          <strong>
+                            Time:
+                          </strong>{" "}
+                          {
+                            request.start_time
+                          }{" "}
+                          -{" "}
+                          {
+                            request.end_time
+                          }
+                        </p>
 
-                <p>
-                  Your accepted organizer connections will appear
-                  here.
-                </p>
-              </div>
-            ) : (
-              <div className="organizer-grid">
-                {connections.map((organizer) => (
-                  <div
-                    className="organizer-card"
-                    key={organizer.id}
-                  >
-                    <div className="organizer-avatar">
-                      {organizer.name
-                        ? organizer.name
-                            .charAt(0)
-                            .toUpperCase()
-                        : "O"}
-                    </div>
+                        {request.message && (
+                          <p>
+                            <strong>
+                              Message:
+                            </strong>{" "}
+                            {
+                              request.message
+                            }
+                          </p>
+                        )}
 
-                    <h3>{organizer.name}</h3>
+                        <p>
+                          <strong>
+                            Status:
+                          </strong>{" "}
+                          {
+                            request.status
+                          }
+                        </p>
 
-                    <p>{organizer.company}</p>
+                      </div>
 
-                    <p>
-                      📍{" "}
-                      {organizer.location ||
-                        "Location not available"}
-                    </p>
+                      {request.status ===
+                        "pending" && (
+                        <div className="button-group">
 
-                    <button className="secondary-btn">
-                      Open Chat
-                    </button>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-        );
-
-      /*
-      =====================================================
-      EVENT OFFERS
-      =====================================================
-      */
-
-      case "offers":
-        return (
-          <div className="professional-content">
-            <h1>Event Offers</h1>
-
-            <p className="section-description">
-              Review event offers received from organizers.
-            </p>
-
-            {offers.length === 0 ? (
-              <div className="dashboard-card">
-                <h3>No event offers</h3>
-
-                <p>
-                  New event offers from organizers will appear
-                  here.
-                </p>
-              </div>
-            ) : (
-              <div className="offers-list">
-                {offers.map((offer) => (
-                  <div
-                    className="offer-card"
-                    key={offer.id}
-                  >
-                    <div>
-                      <h2>{offer.event}</h2>
-
-                      <p>
-                        <strong>Organizer:</strong>{" "}
-                        {offer.organizer}
-                      </p>
-
-                      <p>
-                        <strong>Location:</strong>{" "}
-                        {offer.location ||
-                          "Not available"}
-                      </p>
-
-                      <p>
-                        <strong>Date:</strong>{" "}
-                        {offer.date ||
-                          "Not available"}
-                      </p>
-
-                      <p>
-                        <strong>Role:</strong>{" "}
-                        {offer.role}
-                      </p>
-                    </div>
-
-                    <div className="offer-actions">
-                      {offer.status === "Pending" ? (
-                        <>
                           <button
                             className="accept-btn"
                             onClick={() =>
-                              handleOffer(
-                                offer.id,
-                                "Accepted"
+                              handleEventRequest(
+                                request.request_id,
+                                "accept"
                               )
                             }
                           >
@@ -1016,394 +1305,788 @@ function ProfessionalDashboard() {
                           <button
                             className="reject-btn"
                             onClick={() =>
-                              handleOffer(
-                                offer.id,
-                                "Rejected"
+                              handleEventRequest(
+                                request.request_id,
+                                "reject"
                               )
                             }
                           >
                             Reject
                           </button>
-                        </>
-                      ) : (
-                        <span className="offer-status">
-                          {offer.status}
-                        </span>
+
+                        </div>
                       )}
+
                     </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-        );
+                  )
+                )
+              )}
 
-      /*
-      =====================================================
-      UPCOMING EVENTS
-      =====================================================
-      */
-
-      case "upcoming":
-        return (
-          <div className="professional-content">
-            <h1>Upcoming Events</h1>
-
-            {upcomingEvents.length === 0 ? (
-              <div className="dashboard-card">
-                <h3>No upcoming events</h3>
-
-                <p>
-                  You don't have any confirmed upcoming events
-                  right now.
-                </p>
-              </div>
-            ) : (
-              <div className="dashboard-card">
-                {upcomingEvents.map((event) => (
-                  <div
-                    className="event-item"
-                    key={
-                      event.staff_id ||
-                      event.id
-                    }
-                  >
-                    <div>
-                      <h3>{event.title}</h3>
-
-                      <p>
-                        Organizer:{" "}
-                        {event.organization_name ||
-                          event.organizer_name ||
-                          "Organizer"}
-                      </p>
-
-                      <p>
-                        📍{" "}
-                        {event.location ||
-                          "Location not available"}
-                      </p>
-
-                      <p>
-                        📅{" "}
-                        {event.event_date
-                          ? new Date(
-                              event.event_date
-                            ).toLocaleDateString(
-                              "en-IN",
-                              {
-                                day: "numeric",
-                                month: "long",
-                                year: "numeric",
-                              }
-                            )
-                          : "Date not available"}
-                      </p>
-
-                      {event.professional_role && (
-                        <p>
-                          💼 Role:{" "}
-                          {event.professional_role}
-                        </p>
-                      )}
-                    </div>
-
-                    <span className="event-status">
-                      Confirmed
-                    </span>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-        );
-
-      /*
-      =====================================================
-      EXPERIENCE
-      =====================================================
-      */
-
-      case "experience":
-        return (
-          <div className="professional-content">
-            <h1>My Experience</h1>
-
-            <div className="dashboard-card">
-              <h2>Event Management</h2>
-
-              <p>
-                {profile.experience ||
-                  "Experience information is not available yet."}
-              </p>
-
-              <hr />
-
-              <h3>Skills</h3>
-
-              <div className="skills">
-                {profile.skill ? (
-                  profile.skill
-                    .split(",")
-                    .map((skill, index) => (
-                      <span key={index}>
-                        {skill.trim()}
-                      </span>
-                    ))
-                ) : (
-                  <>
-                    <span>Event Management</span>
-                    <span>Event Coordination</span>
-                  </>
-                )}
-              </div>
-            </div>
-          </div>
-        );
-
-      /*
-      =====================================================
-      REVIEWS
-      =====================================================
-      */
-
-      case "reviews":
-        return (
-          <div className="professional-content">
-            <h1>Reviews</h1>
-
-            <div className="review-card">
-              <div className="review-header">
-                <h3>Reviews</h3>
-                <span>⭐</span>
-              </div>
-
-              <p>
-                Review information will appear here when
-                organizers submit reviews for your work.
-              </p>
-            </div>
-          </div>
-        );
-
-      /*
-      =====================================================
-      ATTENDANCE
-      =====================================================
-      */
-
-      case "attendance":
-        return (
-          <div className="professional-content">
-            <h1>Attendance</h1>
-
-            <div className="stats-grid">
-              <div className="stat-card">
-                <h3>Assigned Events</h3>
-                <h2>{assignedEvents.length}</h2>
-              </div>
-
-              <div className="stat-card">
-                <h3>Confirmed Events</h3>
-
-                <h2>
-                  {
-                    assignedEvents.filter(
-                      (event) =>
-                        event.staff_status ===
-                        "confirmed"
-                    ).length
-                  }
-                </h2>
-              </div>
-
-              <div className="stat-card">
-                <h3>Completed Events</h3>
-
-                <h2>
-                  {
-                    assignedEvents.filter(
-                      (event) =>
-                        event.staff_status ===
-                          "completed" ||
-                        event.event_status ===
-                          "completed"
-                    ).length
-                  }
-                </h2>
-              </div>
             </div>
 
             <div className="dashboard-card">
-              <h2>Event Attendance</h2>
 
-              {assignedEvents.length === 0 ? (
+              <h2>
+                Organizer Connection Requests
+              </h2>
+
+              {connectionRequests.length ===
+              0 ? (
                 <p>
-                  No assigned events available.
+                  No connection requests.
                 </p>
               ) : (
-                assignedEvents.map((event) => (
-                  <div
-                    className="attendance-row"
-                    key={
-                      event.staff_id ||
-                      event.event_id
-                    }
-                  >
-                    <div>
-                      <strong>{event.title}</strong>
+                connectionRequests.map(
+                  (request) => (
+                    <div
+                      className="request-item"
+                      key={
+                        request.id
+                      }
+                    >
 
-                      <p>
-                        {event.event_date
-                          ? new Date(
-                              event.event_date
-                            ).toLocaleDateString(
-                              "en-IN"
-                            )
-                          : "Date unavailable"}
-                      </p>
+                      <div>
 
-                      <p>
-                        Status:{" "}
-                        {event.staff_status ||
-                          "Assigned"}
-                      </p>
+                        <h3>
+                          {request.sender_name ||
+                            request.name ||
+                            "Organizer"}
+                        </h3>
 
-                      {event.attendance_status && (
                         <p>
-                          Attendance:{" "}
-                          <strong>
-                            {event.attendance_status ===
-                            "present"
-                              ? "✓ Present"
-                              : "✗ Absent"}
-                          </strong>
+                          {request.message ||
+                            "Wants to connect with you."}
                         </p>
-                      )}
-                    </div>
 
-                    <div className="button-group">
-                      {event.attendance_status ? (
-                        <span className="offer-status">
-                          {event.attendance_status ===
-                          "present"
-                            ? "✓ Present"
-                            : "✗ Absent"}
-                        </span>
-                      ) : (
-                        <>
+                      </div>
+
+                      {request.status ===
+                        "pending" && (
+                        <div className="button-group">
+
                           <button
                             className="accept-btn"
-                            disabled={
-                              attendanceLoading[
-                                event.event_id
-                              ]
-                            }
                             onClick={() =>
-                              handleAttendance(
-                                event.event_id,
-                                "present"
+                              handleConnectionRequest(
+                                request.id,
+                                "accept"
                               )
                             }
                           >
-                            {attendanceLoading[
-                              event.event_id
-                            ]
-                              ? "Checking..."
-                              : "Mark Present"}
+                            Accept
                           </button>
 
                           <button
                             className="reject-btn"
-                            disabled={
-                              attendanceLoading[
-                                event.event_id
-                              ]
-                            }
                             onClick={() =>
-                              handleAttendance(
-                                event.event_id,
-                                "absent"
+                              handleConnectionRequest(
+                                request.id,
+                                "reject"
                               )
                             }
                           >
-                            Mark Absent
+                            Reject
                           </button>
-                        </>
+
+                        </div>
                       )}
+
                     </div>
-                  </div>
-                ))
+                  )
+                )
               )}
+
             </div>
+
           </div>
         );
 
-      /*
-      =====================================================
-      EARNINGS
-      =====================================================
-      */
+      // =====================================================
+      // MY ORGANIZERS
+      // =====================================================
+
+      case "my-organizers":
+        return (
+          <div className="professional-content">
+
+            <h1>
+              My Organizers
+            </h1>
+
+            <div className="organizer-grid">
+
+              {connections.map(
+                (organizer) => (
+                  <div
+                    className="organizer-card"
+                    key={
+                      organizer.id
+                    }
+                  >
+
+                    <div className="organizer-avatar">
+                      {(
+                        organizer.name ||
+                        "O"
+                      ).charAt(0)}
+                    </div>
+
+                    <h3>
+                      {organizer.name}
+                    </h3>
+
+                    <p>
+                      {organizer.company ||
+                        "Event Organizer"}
+                    </p>
+
+                    <p>
+                      📍{" "}
+                      {organizer.location ||
+                        ""}
+                    </p>
+
+                    <button className="secondary-btn">
+                      Open Chat
+                    </button>
+
+                  </div>
+                )
+              )}
+
+            </div>
+
+          </div>
+        );
+
+      // =====================================================
+      // OFFERS
+      // =====================================================
+
+      case "offers":
+        return (
+          <div className="professional-content">
+
+            <h1>
+              Event Offers
+            </h1>
+
+            <p className="section-description">
+              Review event offers received
+              from organizers.
+            </p>
+
+            <div className="offers-list">
+
+              {offers.length === 0 ? (
+                <p>
+                  No event offers.
+                </p>
+              ) : (
+                offers.map(
+                  (
+                    offer,
+                    index
+                  ) => {
+
+                    const offerKey =
+                      offer?.staff_id ??
+                      offer?.offer_id ??
+                      offer?.id ??
+                      offer?.event_offer_id ??
+                      `offer-${index}`;
+
+                    const offerStatus =
+                      offer?.offer_status ??
+                      offer?.status ??
+                      "pending";
+
+                    const normalizedOfferStatus =
+                      String(
+                        offerStatus
+                      ).toLowerCase();
+
+                    return (
+                      <div
+                        className="offer-card"
+                        key={
+                          offerKey
+                        }
+                      >
+
+                        <div>
+
+                          <h2>
+                            {offer.event ||
+                              offer.title ||
+                              offer.event_title}
+                          </h2>
+
+                          <p>
+                            <strong>
+                              Organizer:
+                            </strong>{" "}
+                            {offer.organizer ||
+                              offer.organizer_name ||
+                              ""}
+                          </p>
+
+                          <p>
+                            <strong>
+                              Location:
+                            </strong>{" "}
+                            {offer.location ||
+                              ""}
+                          </p>
+
+                          <p>
+                            <strong>
+                              Date:
+                            </strong>{" "}
+                            {offer.date ||
+                              offer.event_date ||
+                              ""}
+                          </p>
+
+                          <p>
+                            <strong>
+                              Role:
+                            </strong>{" "}
+                            {offer.role ||
+                              offer.professional_role ||
+                              "Event Staff"}
+                          </p>
+
+                          <p>
+                            <strong>
+                              Status:
+                            </strong>{" "}
+                            {normalizedOfferStatus}
+                          </p>
+
+                        </div>
+
+                        <div className="offer-actions">
+
+                          {[
+                            "pending",
+                            "applied",
+                            "shortlisted",
+                          ].includes(
+                            normalizedOfferStatus
+                          ) ? (
+                            <>
+
+                              <button
+                                className="accept-btn"
+                                onClick={() =>
+                                  handleOffer(
+                                    offer,
+                                    "accept"
+                                  )
+                                }
+                              >
+                                Accept
+                              </button>
+
+                              <button
+                                className="reject-btn"
+                                onClick={() =>
+                                  handleOffer(
+                                    offer,
+                                    "reject"
+                                  )
+                                }
+                              >
+                                Reject
+                              </button>
+
+                            </>
+                          ) : (
+                            <span className="offer-status">
+                              {
+                                offerStatus
+                              }
+                            </span>
+                          )}
+
+                        </div>
+
+                      </div>
+                    );
+                  }
+                )
+              )}
+
+            </div>
+
+          </div>
+        );
+
+      // =====================================================
+      // UPCOMING EVENTS
+      // =====================================================
+
+      case "upcoming":
+        return (
+          <div className="professional-content">
+
+            <h1>
+              Upcoming Events
+            </h1>
+
+            <div className="dashboard-card">
+
+              {upcomingEvents.length ===
+              0 ? (
+                <p>
+                  No upcoming events.
+                </p>
+              ) : (
+                upcomingEvents.map(
+                  (
+                    event,
+                    index
+                  ) => (
+                    <div
+                      className="event-item"
+                      key={
+                        getEventId(
+                          event
+                        ) ||
+                        index
+                      }
+                    >
+
+                      <div>
+
+                        <h3>
+                          {event.title ||
+                            event.event_title}
+                        </h3>
+
+                        <p>
+                          Organizer:{" "}
+                          {event.organizer_name ||
+                            event.organizer ||
+                            ""}
+                        </p>
+
+                        <p>
+                          📍{" "}
+                          {event.location ||
+                            ""}
+                        </p>
+
+                        <p>
+                          📅{" "}
+                          {event.event_date ||
+                            event.date ||
+                            ""}
+                        </p>
+
+                      </div>
+
+                      <span className="event-status">
+                        Confirmed
+                      </span>
+
+                    </div>
+                  )
+                )
+              )}
+
+            </div>
+
+          </div>
+        );
+
+      // =====================================================
+      // MY EXPERIENCE
+      // =====================================================
+
+      case "experience":
+        return (
+          <div className="professional-content">
+
+            <h1>
+              My Experience
+            </h1>
+
+            <div className="dashboard-card">
+
+              <h2>
+                {profile.skill ||
+                  "Event Management"}
+              </h2>
+
+              <p>
+                {profile.experience ||
+                  "2 Years"}{" "}
+                of experience working
+                in event management and
+                event coordination.
+              </p>
+
+              <hr />
+
+              <h3>
+                Skills
+              </h3>
+
+              <div className="skills">
+
+                <span>
+                  Event Management
+                </span>
+
+                <span>
+                  Event Coordination
+                </span>
+
+                <span>
+                  Team Management
+                </span>
+
+                <span>
+                  Guest Management
+                </span>
+
+              </div>
+
+            </div>
+
+          </div>
+        );
+
+      // =====================================================
+      // REVIEWS
+      // =====================================================
+
+      case "reviews":
+        return (
+          <div className="professional-content">
+
+            <h1>
+              Reviews
+            </h1>
+
+            <div className="review-card">
+
+              <div className="review-header">
+
+                <h3>
+                  Priya Sharma
+                </h3>
+
+                <span>
+                  ⭐⭐⭐⭐⭐
+                </span>
+
+              </div>
+
+              <p>
+                Great professional.
+                Very punctual and
+                cooperative during the
+                event.
+              </p>
+
+            </div>
+
+            <div className="review-card">
+
+              <div className="review-header">
+
+                <h3>
+                  Rohan Mehta
+                </h3>
+
+                <span>
+                  ⭐⭐⭐⭐
+                </span>
+
+              </div>
+
+              <p>
+                Good coordination and
+                professional behaviour.
+              </p>
+
+            </div>
+
+          </div>
+        );
+
+      // =====================================================
+      // ATTENDANCE
+      // =====================================================
+
+      case "attendance":
+        return (
+          <div className="professional-content">
+
+            <h1>
+              Attendance
+            </h1>
+
+            <div className="stats-grid">
+
+              <div className="stat-card">
+
+                <h3>
+                  Total Events
+                </h3>
+
+                <h2>
+                  {assignedEvents.length}
+                </h2>
+
+              </div>
+
+              <div className="stat-card">
+
+                <h3>
+                  Present
+                </h3>
+
+                <h2>
+                  {
+                    assignedEvents.filter(
+                      (event) => {
+                        const eventId =
+                          getEventId(
+                            event
+                          );
+
+                        return (
+                          attendanceStatus[
+                            eventId
+                          ] ===
+                            "present" ||
+                          event.attendance_status ===
+                            "present"
+                        );
+                      }
+                    ).length
+                  }
+                </h2>
+
+              </div>
+
+              <div className="stat-card">
+
+                <h3>
+                  Absent
+                </h3>
+
+                <h2>
+                  {
+                    assignedEvents.filter(
+                      (event) =>
+                        event.attendance_status ===
+                        "absent"
+                    ).length
+                  }
+                </h2>
+
+              </div>
+
+            </div>
+
+            <div className="dashboard-card">
+
+              <h2>
+                Attendance History
+              </h2>
+
+              {assignedEvents.length ===
+              0 ? (
+                <p>
+                  No attendance records.
+                </p>
+              ) : (
+                assignedEvents.map(
+                  (
+                    event,
+                    index
+                  ) => {
+
+                    const eventId =
+                      getEventId(
+                        event
+                      );
+
+                    return (
+                      <div
+                        className="attendance-row"
+                        key={
+                          eventId ||
+                          index
+                        }
+                      >
+
+                        <span>
+                          {event.title}
+                        </span>
+
+                        <span>
+                          {
+                            event.event_date
+                          }
+                        </span>
+
+                        <strong>
+                          {attendanceStatus[
+                            eventId
+                          ] ===
+                          "present"
+                            ? "present"
+                            : event.attendance_status ||
+                              "Not Marked"}
+                        </strong>
+
+                      </div>
+                    );
+                  }
+                )
+              )}
+
+            </div>
+
+          </div>
+        );
+
+      // =====================================================
+      // EARNINGS
+      // =====================================================
 
       case "earnings":
         return (
           <div className="professional-content">
-            <h1>Earnings</h1>
+
+            <h1>
+              Earnings
+            </h1>
 
             <div className="stats-grid">
+
               <div className="stat-card">
-                <h3>Total Earnings</h3>
-                <h2>₹0</h2>
+
+                <h3>
+                  Total Earnings
+                </h3>
+
+                <h2>
+                  ₹35,000
+                </h2>
+
               </div>
 
               <div className="stat-card">
-                <h3>This Month</h3>
-                <h2>₹0</h2>
+
+                <h3>
+                  This Month
+                </h3>
+
+                <h2>
+                  ₹12,000
+                </h2>
+
               </div>
 
               <div className="stat-card">
-                <h3>Pending</h3>
-                <h2>₹0</h2>
+
+                <h3>
+                  Pending
+                </h3>
+
+                <h2>
+                  ₹5,000
+                </h2>
+
               </div>
+
             </div>
 
             <div className="dashboard-card">
-              <h2>Payment History</h2>
 
-              <p>
-                Earnings and payment history will appear here
-                once the payment module is connected.
-              </p>
+              <h2>
+                Payment History
+              </h2>
+
+              <div className="payment-row">
+
+                <span>
+                  Wedding Celebration
+                </span>
+
+                <strong>
+                  ₹10,000
+                </strong>
+
+              </div>
+
+              <div className="payment-row">
+
+                <span>
+                  Corporate Event
+                </span>
+
+                <strong>
+                  ₹8,000
+                </strong>
+
+              </div>
+
+              <div className="payment-row">
+
+                <span>
+                  Birthday Event
+                </span>
+
+                <strong>
+                  ₹7,000
+                </strong>
+
+              </div>
+
             </div>
+
           </div>
         );
 
-      /*
-      =====================================================
-      CHAT
-      =====================================================
-      */
+      // =====================================================
+      // CHAT
+      // =====================================================
 
       case "chat":
         return (
           <div className="professional-content">
-            <h1>Organizer Chat</h1>
+
+            <h1>
+              Organizer Chat
+            </h1>
 
             <div className="chat-box">
+
               <div className="chat-header">
+
                 <h3>
-                  {connections.length > 0
-                    ? connections[0].name
-                    : "Organizer"}
+                  Priya Sharma
                 </h3>
 
-                <span>Online</span>
+                <span>
+                  Online
+                </span>
+
               </div>
 
               <div className="messages">
+
                 <div className="message received">
-                  Hello! Are you available for our
-                  upcoming event?
+                  Hello! Are you available
+                  for our upcoming event?
                 </div>
 
                 <div className="message sent">
@@ -1411,12 +2094,14 @@ function ProfessionalDashboard() {
                 </div>
 
                 <div className="message received">
-                  Great! I will send you the event
-                  details.
+                  Great! I will send you
+                  the event details.
                 </div>
+
               </div>
 
               <div className="chat-input">
+
                 <input
                   type="text"
                   placeholder="Type a message..."
@@ -1425,8 +2110,156 @@ function ProfessionalDashboard() {
                 <button className="primary-btn">
                   Send
                 </button>
+
               </div>
+
             </div>
+
+          </div>
+        );
+
+      // =====================================================
+      // MY EVENTS
+      // =====================================================
+
+      case "my-events":
+        return (
+          <div className="professional-content">
+
+            <h1>
+              My Events
+            </h1>
+
+            {assignedEvents.length ===
+            0 ? (
+              <div className="dashboard-card">
+
+                <p>
+                  No events assigned yet.
+                </p>
+
+              </div>
+            ) : (
+              assignedEvents.map(
+                (
+                  event,
+                  index
+                ) => {
+
+                  const eventId =
+                    getEventId(
+                      event
+                    );
+
+                  return (
+                    <div
+                      className="dashboard-card"
+                      key={
+                        eventId ||
+                        index
+                      }
+                    >
+
+                      <div className="event-item">
+
+                        <div>
+
+                          <h3>
+                            {event.title}
+                          </h3>
+
+                          <p>
+                            Organizer:{" "}
+                            {
+                              event.organizer_name
+                            }
+                          </p>
+
+                          <p>
+                            📍{" "}
+                            {
+                              event.location
+                            }
+                          </p>
+
+                          <p>
+                            📅{" "}
+                            {
+                              event.event_date
+                            }
+                          </p>
+
+                          <p>
+                            🕐{" "}
+                            {
+                              event.start_time
+                            }{" "}
+                            -{" "}
+                            {
+                              event.end_time
+                            }
+                          </p>
+
+                          <p>
+                            Role:{" "}
+                            {
+                              event.professional_role ||
+                              "Event Staff"
+                            }
+                          </p>
+
+                        </div>
+
+                        <span className="event-status">
+                          {
+                            event.staff_status ||
+                            "Confirmed"
+                          }
+                        </span>
+
+                      </div>
+
+                      <hr />
+
+                      <h3>
+                        Attendance
+                      </h3>
+
+                      {attendanceStatus[
+                        eventId
+                      ] ===
+                      "present" ? (
+                        <p>
+                          ✓ Present
+                        </p>
+                      ) : (
+                        <button
+                          className="primary-btn"
+                          disabled={
+                            attendanceLoading[
+                              eventId
+                            ]
+                          }
+                          onClick={() =>
+                            handleAttendance(
+                              event
+                            )
+                          }
+                        >
+                          {attendanceLoading[
+                            eventId
+                          ]
+                            ? "Checking Location..."
+                            : "Mark Present"}
+                        </button>
+                      )}
+
+                    </div>
+                  );
+                }
+              )
+            )}
+
           </div>
         );
 
@@ -1435,33 +2268,36 @@ function ProfessionalDashboard() {
     }
   };
 
-  /*
-  =========================================================
-  MAIN UI
-  =========================================================
-  */
+  // =========================================================
+  // MAIN UI
+  // =========================================================
 
   return (
     <div className="professional-dashboard">
 
-      {/* Sidebar */}
+      {/* SIDEBAR */}
 
       <aside className="professional-sidebar">
 
         <div className="sidebar-logo">
-          <h2>CrewAura</h2>
+          <h2>
+            CrewAura
+          </h2>
         </div>
 
         <nav>
 
           <button
             className={
-              activeSection === "dashboard"
+              activeSection ===
+              "dashboard"
                 ? "active"
                 : ""
             }
             onClick={() =>
-              setActiveSection("dashboard")
+              setActiveSection(
+                "dashboard"
+              )
             }
           >
             🏠 Dashboard
@@ -1469,12 +2305,15 @@ function ProfessionalDashboard() {
 
           <button
             className={
-              activeSection === "profile"
+              activeSection ===
+              "profile"
                 ? "active"
                 : ""
             }
             onClick={() =>
-              setActiveSection("profile")
+              setActiveSection(
+                "profile"
+              )
             }
           >
             👤 My Profile
@@ -1482,12 +2321,15 @@ function ProfessionalDashboard() {
 
           <button
             className={
-              activeSection === "organizers"
+              activeSection ===
+              "organizers"
                 ? "active"
                 : ""
             }
             onClick={() =>
-              setActiveSection("organizers")
+              setActiveSection(
+                "organizers"
+              )
             }
           >
             🔎 Find Organizers
@@ -1495,25 +2337,55 @@ function ProfessionalDashboard() {
 
           <button
             className={
-              activeSection === "requests"
+              activeSection ===
+              "requests"
                 ? "active"
                 : ""
             }
             onClick={() =>
-              setActiveSection("requests")
+              setActiveSection(
+                "requests"
+              )
             }
           >
             🤝 Connection Requests
+
+            {eventRequests.filter(
+              (request) =>
+                request.status ===
+                "pending"
+            ).length > 0 && (
+              <span
+                style={{
+                  marginLeft:
+                    "6px",
+                }}
+              >
+                (
+                {
+                  eventRequests.filter(
+                    (request) =>
+                      request.status ===
+                      "pending"
+                  ).length
+                }
+                )
+              </span>
+            )}
+
           </button>
 
           <button
             className={
-              activeSection === "my-organizers"
+              activeSection ===
+              "my-organizers"
                 ? "active"
                 : ""
             }
             onClick={() =>
-              setActiveSection("my-organizers")
+              setActiveSection(
+                "my-organizers"
+              )
             }
           >
             👥 My Organizers
@@ -1521,12 +2393,15 @@ function ProfessionalDashboard() {
 
           <button
             className={
-              activeSection === "offers"
+              activeSection ===
+              "offers"
                 ? "active"
                 : ""
             }
             onClick={() =>
-              setActiveSection("offers")
+              setActiveSection(
+                "offers"
+              )
             }
           >
             📩 Event Offers
@@ -1534,12 +2409,15 @@ function ProfessionalDashboard() {
 
           <button
             className={
-              activeSection === "upcoming"
+              activeSection ===
+              "upcoming"
                 ? "active"
                 : ""
             }
             onClick={() =>
-              setActiveSection("upcoming")
+              setActiveSection(
+                "upcoming"
+              )
             }
           >
             📅 Upcoming Events
@@ -1547,12 +2425,31 @@ function ProfessionalDashboard() {
 
           <button
             className={
-              activeSection === "experience"
+              activeSection ===
+              "my-events"
                 ? "active"
                 : ""
             }
             onClick={() =>
-              setActiveSection("experience")
+              setActiveSection(
+                "my-events"
+              )
+            }
+          >
+            🗓️ My Events
+          </button>
+
+          <button
+            className={
+              activeSection ===
+              "experience"
+                ? "active"
+                : ""
+            }
+            onClick={() =>
+              setActiveSection(
+                "experience"
+              )
             }
           >
             💼 My Experience
@@ -1560,12 +2457,15 @@ function ProfessionalDashboard() {
 
           <button
             className={
-              activeSection === "reviews"
+              activeSection ===
+              "reviews"
                 ? "active"
                 : ""
             }
             onClick={() =>
-              setActiveSection("reviews")
+              setActiveSection(
+                "reviews"
+              )
             }
           >
             ⭐ Reviews
@@ -1573,12 +2473,15 @@ function ProfessionalDashboard() {
 
           <button
             className={
-              activeSection === "attendance"
+              activeSection ===
+              "attendance"
                 ? "active"
                 : ""
             }
             onClick={() =>
-              setActiveSection("attendance")
+              setActiveSection(
+                "attendance"
+              )
             }
           >
             📋 Attendance
@@ -1586,12 +2489,15 @@ function ProfessionalDashboard() {
 
           <button
             className={
-              activeSection === "earnings"
+              activeSection ===
+              "earnings"
                 ? "active"
                 : ""
             }
             onClick={() =>
-              setActiveSection("earnings")
+              setActiveSection(
+                "earnings"
+              )
             }
           >
             💰 Earnings
@@ -1599,12 +2505,15 @@ function ProfessionalDashboard() {
 
           <button
             className={
-              activeSection === "chat"
+              activeSection ===
+              "chat"
                 ? "active"
                 : ""
             }
             onClick={() =>
-              setActiveSection("chat")
+              setActiveSection(
+                "chat"
+              )
             }
           >
             💬 Organizer Chat
@@ -1615,9 +2524,17 @@ function ProfessionalDashboard() {
         <button
           className="logout-btn"
           onClick={() => {
-            localStorage.removeItem("token");
-            localStorage.removeItem("user");
-            window.location.href = "/login";
+
+            localStorage.removeItem(
+              "token"
+            );
+
+            localStorage.removeItem(
+              "user"
+            );
+
+            window.location.href =
+              "/login";
           }}
         >
           🚪 Logout
@@ -1625,14 +2542,16 @@ function ProfessionalDashboard() {
 
       </aside>
 
-      {/* Main Content */}
+      {/* MAIN CONTENT */}
 
       <main className="professional-main">
 
         <header className="professional-topbar">
 
           <div>
-            <h2>Professional Panel</h2>
+            <h2>
+              Professional Panel
+            </h2>
           </div>
 
           <div className="topbar-right">
@@ -1645,14 +2564,12 @@ function ProfessionalDashboard() {
 
               <div className="small-avatar">
                 {profile.name
-                  ? profile.name
-                      .charAt(0)
-                      .toUpperCase()
+                  ? profile.name.charAt(0)
                   : "P"}
               </div>
 
               <span>
-                {profile.name || "Professional"}
+                {profile.name}
               </span>
 
             </div>
