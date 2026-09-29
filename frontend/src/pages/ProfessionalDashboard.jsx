@@ -14,12 +14,10 @@ function ProfessionalDashboard() {
 
   const [attendanceLoading, setAttendanceLoading] = useState({});
   const [attendanceStatus, setAttendanceStatus] = useState({});
+
   const [organizers, setOrganizers] = useState([]);
   const [sendingRequest, setSendingRequest] = useState({});
   const [selectedOrganizer, setSelectedOrganizer] = useState(null);
-
-
-
 
   const [profile, setProfile] = useState({
     name: "Professional User",
@@ -41,12 +39,8 @@ function ProfessionalDashboard() {
   // =========================================================
 
   const [chatOrganizers, setChatOrganizers] = useState([]);
-  const [selectedOrganizer, setSelectedOrganizer] =
-    useState(null);
-
   const [chatConversationId, setChatConversationId] =
     useState(null);
-
   const [chatMessages, setChatMessages] = useState([]);
   const [chatInput, setChatInput] = useState("");
   const [chatLoading, setChatLoading] = useState(false);
@@ -130,7 +124,9 @@ function ProfessionalDashboard() {
 
           if (response.ok) {
             const data = await response.json();
-            setConnections(data);
+            setConnections(
+              Array.isArray(data) ? data : []
+            );
           }
         } catch (error) {
           console.error(
@@ -150,7 +146,10 @@ function ProfessionalDashboard() {
 
           if (response.ok) {
             const data = await response.json();
-            setConnectionRequests(data);
+
+            setConnectionRequests(
+              Array.isArray(data) ? data : []
+            );
           }
         } catch (error) {
           console.error(
@@ -170,7 +169,10 @@ function ProfessionalDashboard() {
 
           if (response.ok) {
             const data = await response.json();
-            setEventRequests(data);
+
+            setEventRequests(
+              Array.isArray(data) ? data : []
+            );
           } else {
             console.error(
               "Event requests API error:",
@@ -196,12 +198,11 @@ function ProfessionalDashboard() {
           if (response.ok) {
             const data = await response.json();
 
-            console.log(
-              "Event Offers:",
-              data
-            );
+            console.log("Event Offers:", data);
 
-            setOffers(data);
+            setOffers(
+              Array.isArray(data) ? data : []
+            );
           }
         } catch (error) {
           console.error(
@@ -221,7 +222,10 @@ function ProfessionalDashboard() {
 
           if (response.ok) {
             const data = await response.json();
-            setUpcomingEvents(data);
+
+            setUpcomingEvents(
+              Array.isArray(data) ? data : []
+            );
           }
         } catch (error) {
           console.error(
@@ -230,21 +234,34 @@ function ProfessionalDashboard() {
           );
         }
 
+        // =====================================================
+        // ALL ORGANIZERS
+        // =====================================================
 
         try {
           const response = await fetch(
-            "http://localhost:5500/api/organizers"
+            `${BACKEND_URL}/api/organizers`
           );
-        
+
           if (response.ok) {
             const data = await response.json();
-            setOrganizers(data);
+
+            setOrganizers(
+              Array.isArray(data) ? data : []
+            );
+
             console.log("All Organizers:", data);
           } else {
-            console.error("Organizers API error:", response.status);
+            console.error(
+              "Organizers API error:",
+              response.status
+            );
           }
         } catch (error) {
-          console.error("Organizers loading error:", error);
+          console.error(
+            "Organizers loading error:",
+            error
+          );
         }
 
         // =====================================================
@@ -259,7 +276,9 @@ function ProfessionalDashboard() {
           if (response.ok) {
             const data = await response.json();
 
-            setAssignedEvents(data);
+            setAssignedEvents(
+              Array.isArray(data) ? data : []
+            );
 
             const attendanceMap = {};
 
@@ -267,18 +286,14 @@ function ProfessionalDashboard() {
               const eventId = getEventId(event);
 
               if (
-                event.attendance_status ===
-                  "present" &&
+                event.attendance_status === "present" &&
                 eventId
               ) {
-                attendanceMap[eventId] =
-                  "present";
+                attendanceMap[eventId] = "present";
               }
             });
 
-            setAttendanceStatus(
-              attendanceMap
-            );
+            setAttendanceStatus(attendanceMap);
 
             console.log(
               "Assigned Events:",
@@ -340,9 +355,7 @@ function ProfessionalDashboard() {
         );
 
         setChatOrganizers(
-          Array.isArray(data)
-            ? data
-            : []
+          Array.isArray(data) ? data : []
         );
       } catch (error) {
         console.error(
@@ -361,9 +374,7 @@ function ProfessionalDashboard() {
   // OPEN PERSONAL CHAT
   // =========================================================
 
-  const openOrganizerChat = async (
-    organizer
-  ) => {
+  const openOrganizerChat = async (organizer) => {
     try {
       if (!userId) {
         alert(
@@ -379,9 +390,7 @@ function ProfessionalDashboard() {
       );
 
       if (!organizerId) {
-        alert(
-          "Organizer ID is missing."
-        );
+        alert("Organizer ID is missing.");
         return;
       }
 
@@ -395,25 +404,19 @@ function ProfessionalDashboard() {
       setChatMessages([]);
       setChatConversationId(null);
 
-      // =====================================================
-      // CREATE / GET PERSONAL CONVERSATION
-      // =====================================================
-
-      const conversationResponse =
-        await fetch(
-          `${BACKEND_URL}/api/conversations/personal`,
-          {
-            method: "POST",
-            headers: {
-              "Content-Type":
-                "application/json",
-            },
-            body: JSON.stringify({
-              user1_id: Number(userId),
-              user2_id: organizerId,
-            }),
-          }
-        );
+      const conversationResponse = await fetch(
+        `${BACKEND_URL}/api/conversations/personal`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            user1_id: Number(userId),
+            user2_id: organizerId,
+          }),
+        }
+      );
 
       const conversationData =
         await conversationResponse.json();
@@ -428,18 +431,11 @@ function ProfessionalDashboard() {
       const conversationId =
         conversationData.conversation_id;
 
-      setChatConversationId(
-        conversationId
+      setChatConversationId(conversationId);
+
+      const messagesResponse = await fetch(
+        `${BACKEND_URL}/api/conversations/${conversationId}/messages?userId=${userId}`
       );
-
-      // =====================================================
-      // LOAD MESSAGES
-      // =====================================================
-
-      const messagesResponse =
-        await fetch(
-          `${BACKEND_URL}/api/conversations/${conversationId}/messages?userId=${userId}`
-        );
 
       const messagesData =
         await messagesResponse.json();
@@ -476,8 +472,7 @@ function ProfessionalDashboard() {
   // =========================================================
 
   const sendChatMessage = async () => {
-    const message =
-      chatInput.trim();
+    const message = chatInput.trim();
 
     if (!message) {
       return;
@@ -500,24 +495,21 @@ function ProfessionalDashboard() {
     try {
       setChatSending(true);
 
-      const response =
-        await fetch(
-          `${BACKEND_URL}/api/conversations/${chatConversationId}/messages`,
-          {
-            method: "POST",
-            headers: {
-              "Content-Type":
-                "application/json",
-            },
-            body: JSON.stringify({
-              sender_id: Number(userId),
-              message: message,
-            }),
-          }
-        );
+      const response = await fetch(
+        `${BACKEND_URL}/api/conversations/${chatConversationId}/messages`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            sender_id: Number(userId),
+            message: message,
+          }),
+        }
+      );
 
-      const data =
-        await response.json();
+      const data = await response.json();
 
       if (!response.ok) {
         throw new Error(
@@ -533,14 +525,9 @@ function ProfessionalDashboard() {
 
       setChatInput("");
 
-      // =====================================================
-      // RELOAD MESSAGES
-      // =====================================================
-
-      const messagesResponse =
-        await fetch(
-          `${BACKEND_URL}/api/conversations/${chatConversationId}/messages?userId=${userId}`
-        );
+      const messagesResponse = await fetch(
+        `${BACKEND_URL}/api/conversations/${chatConversationId}/messages?userId=${userId}`
+      );
 
       const messagesData =
         await messagesResponse.json();
@@ -587,8 +574,7 @@ function ProfessionalDashboard() {
         }
       );
 
-      const data =
-        await response.json();
+      const data = await response.json();
 
       if (!response.ok) {
         alert(
@@ -618,7 +604,9 @@ function ProfessionalDashboard() {
           await requestsResponse.json();
 
         setEventRequests(
-          requestsData
+          Array.isArray(requestsData)
+            ? requestsData
+            : []
         );
       }
 
@@ -633,27 +621,26 @@ function ProfessionalDashboard() {
             await eventsResponse.json();
 
           setAssignedEvents(
-            eventsData
+            Array.isArray(eventsData)
+              ? eventsData
+              : []
           );
 
           const attendanceMap = {};
 
-          eventsData.forEach(
-            (event) => {
-              const eventId =
-                getEventId(event);
+          eventsData.forEach((event) => {
+            const eventId =
+              getEventId(event);
 
-              if (
-                event.attendance_status ===
-                  "present" &&
-                eventId
-              ) {
-                attendanceMap[
-                  eventId
-                ] = "present";
-              }
+            if (
+              event.attendance_status ===
+                "present" &&
+              eventId
+            ) {
+              attendanceMap[eventId] =
+                "present";
             }
-          );
+          });
 
           setAttendanceStatus(
             attendanceMap
@@ -670,7 +657,9 @@ function ProfessionalDashboard() {
             await upcomingResponse.json();
 
           setUpcomingEvents(
-            upcomingData
+            Array.isArray(upcomingData)
+              ? upcomingData
+              : []
           );
         }
       }
@@ -706,8 +695,7 @@ function ProfessionalDashboard() {
         }
       );
 
-      const data =
-        await response.json();
+      const data = await response.json();
 
       if (!response.ok) {
         alert(
@@ -733,7 +721,9 @@ function ProfessionalDashboard() {
           await requestsResponse.json();
 
         setConnectionRequests(
-          requestsData
+          Array.isArray(requestsData)
+            ? requestsData
+            : []
         );
       }
 
@@ -747,19 +737,18 @@ function ProfessionalDashboard() {
           await connectionsResponse.json();
 
         setConnections(
-          connectionsData
+          Array.isArray(connectionsData)
+            ? connectionsData
+            : []
         );
       }
 
-      // Refresh chat organizers too
       const chatConnectionsResponse =
         await fetch(
           `${BACKEND_URL}/api/connections/${userId}`
         );
 
-      if (
-        chatConnectionsResponse.ok
-      ) {
+      if (chatConnectionsResponse.ok) {
         const chatConnectionsData =
           await chatConnectionsResponse.json();
 
@@ -783,52 +772,73 @@ function ProfessionalDashboard() {
     }
   };
 
-  const sendConnectionRequest = async (organizerId) => {
+  // =========================================================
+  // SEND CONNECTION REQUEST
+  // =========================================================
+
+  const sendConnectionRequest = async (
+    organizerId
+  ) => {
     try {
       setSendingRequest((prev) => ({
         ...prev,
         [organizerId]: true,
       }));
-  
+
       const response = await fetch(
-        "http://localhost:5500/api/connections/request",
+        `${BACKEND_URL}/api/connections/request`,
         {
           method: "POST",
           headers: {
-            "Content-Type": "application/json",
+            "Content-Type":
+              "application/json",
           },
           body: JSON.stringify({
             sender_id: userId,
             receiver_id: organizerId,
             sender_role: "professional",
             receiver_role: "organizer",
-            message: "I would like to connect with you.",
+            message:
+              "I would like to connect with you.",
           }),
         }
       );
-  
+
       const data = await response.json();
-  
+
       if (!response.ok) {
-        alert(data.message || "Failed to send connection request");
+        alert(
+          data.message ||
+            "Failed to send connection request"
+        );
         return;
       }
-  
-      alert("Connection request sent!");
-  
+
+      alert(
+        "Connection request sent!"
+      );
+
       setOrganizers((prev) =>
         prev.map((organizer) =>
-          organizer.id === organizerId
+          Number(organizer.id) ===
+          Number(organizerId)
             ? {
                 ...organizer,
-                connection_status: "pending",
+                connection_status:
+                  "pending",
               }
             : organizer
         )
       );
     } catch (error) {
-      console.error("Connection request error:", error);
-      alert("Something went wrong while sending request.");
+      console.error(
+        "Connection request error:",
+        error
+      );
+
+      alert(
+        "Something went wrong while sending request."
+      );
     } finally {
       setSendingRequest((prev) => ({
         ...prev,
@@ -841,11 +851,8 @@ function ProfessionalDashboard() {
   // GPS ATTENDANCE
   // =========================================================
 
-  const handleAttendance = async (
-    event
-  ) => {
-    const eventId =
-      getEventId(event);
+  const handleAttendance = async (event) => {
+    const eventId = getEventId(event);
 
     console.log(
       "Attendance Event:",
@@ -858,27 +865,21 @@ function ProfessionalDashboard() {
     );
 
     if (!eventId) {
-      alert(
-        "Event ID is missing."
-      );
+      alert("Event ID is missing.");
       return;
     }
 
-    if (
-      !navigator.geolocation
-    ) {
+    if (!navigator.geolocation) {
       alert(
         "Geolocation is not supported by your browser."
       );
       return;
     }
 
-    setAttendanceLoading(
-      (previous) => ({
-        ...previous,
-        [eventId]: true,
-      })
-    );
+    setAttendanceLoading((previous) => ({
+      ...previous,
+      [eventId]: true,
+    }));
 
     navigator.geolocation.getCurrentPosition(
       async (position) => {
@@ -909,48 +910,34 @@ function ProfessionalDashboard() {
             return;
           }
 
-          const toRadians =
-            (value) =>
-              (value * Math.PI) /
-              180;
+          const toRadians = (value) =>
+            (value * Math.PI) / 180;
 
           const R = 6371000;
 
-          const dLat =
-            toRadians(
-              latitude -
-                eventLatitude
-            );
+          const dLat = toRadians(
+            latitude -
+              eventLatitude
+          );
 
-          const dLon =
-            toRadians(
-              longitude -
-                eventLongitude
-            );
+          const dLon = toRadians(
+            longitude -
+              eventLongitude
+          );
 
           const a =
-            Math.sin(
-              dLat / 2
-            ) *
-              Math.sin(
-                dLat / 2
-              ) +
+            Math.sin(dLat / 2) *
+              Math.sin(dLat / 2) +
             Math.cos(
               toRadians(
                 eventLatitude
               )
             ) *
               Math.cos(
-                toRadians(
-                  latitude
-                )
+                toRadians(latitude)
               ) *
-              Math.sin(
-                dLon / 2
-              ) *
-              Math.sin(
-                dLon / 2
-              );
+              Math.sin(dLon / 2) *
+              Math.sin(dLon / 2);
 
           const c =
             2 *
@@ -959,8 +946,7 @@ function ProfessionalDashboard() {
               Math.sqrt(1 - a)
             );
 
-          const distance =
-            R * c;
+          const distance = R * c;
 
           console.log(
             "User Latitude:",
@@ -987,9 +973,7 @@ function ProfessionalDashboard() {
             distance
           );
 
-          if (
-            distance > 200
-          ) {
+          if (distance > 200) {
             alert(
               `You are ${Math.round(
                 distance
@@ -1008,14 +992,12 @@ function ProfessionalDashboard() {
                   "Content-Type":
                     "application/json",
                 },
-                body: JSON.stringify(
-                  {
-                    professional_id:
-                      userId,
-                    latitude,
-                    longitude,
-                  }
-                ),
+                body: JSON.stringify({
+                  professional_id:
+                    userId,
+                  latitude,
+                  longitude,
+                }),
               }
             );
 
@@ -1037,8 +1019,7 @@ function ProfessionalDashboard() {
           setAttendanceStatus(
             (previous) => ({
               ...previous,
-              [eventId]:
-                "present",
+              [eventId]: "present",
             })
           );
 
@@ -1047,14 +1028,16 @@ function ProfessionalDashboard() {
               `${BACKEND_URL}/api/events/professional/${userId}`
             );
 
-          if (
-            assignedResponse.ok
-          ) {
+          if (assignedResponse.ok) {
             const assignedData =
               await assignedResponse.json();
 
             setAssignedEvents(
-              assignedData
+              Array.isArray(
+                assignedData
+              )
+                ? assignedData
+                : []
             );
           }
         } catch (error) {
@@ -1070,13 +1053,11 @@ function ProfessionalDashboard() {
           setAttendanceLoading(
             (previous) => ({
               ...previous,
-              [eventId]:
-                false,
+              [eventId]: false,
             })
           );
         }
       },
-
       (error) => {
         console.error(
           "GPS error:",
@@ -1086,8 +1067,7 @@ function ProfessionalDashboard() {
         setAttendanceLoading(
           (previous) => ({
             ...previous,
-            [eventId]:
-              false,
+            [eventId]: false,
           })
         );
 
@@ -1095,7 +1075,6 @@ function ProfessionalDashboard() {
           "Unable to access your location. Please allow location permission."
         );
       },
-
       {
         enableHighAccuracy: true,
         timeout: 10000,
@@ -1175,7 +1154,11 @@ function ProfessionalDashboard() {
         const offersData =
           await offersResponse.json();
 
-        setOffers(offersData);
+        setOffers(
+          Array.isArray(offersData)
+            ? offersData
+            : []
+        );
       }
 
       const eventsResponse =
@@ -1188,27 +1171,26 @@ function ProfessionalDashboard() {
           await eventsResponse.json();
 
         setAssignedEvents(
-          eventsData
+          Array.isArray(eventsData)
+            ? eventsData
+            : []
         );
 
         const attendanceMap = {};
 
-        eventsData.forEach(
-          (event) => {
-            const eventId =
-              getEventId(event);
+        eventsData.forEach((event) => {
+          const eventId =
+            getEventId(event);
 
-            if (
-              event.attendance_status ===
-                "present" &&
-              eventId
-            ) {
-              attendanceMap[
-                eventId
-              ] = "present";
-            }
+          if (
+            event.attendance_status ===
+              "present" &&
+            eventId
+          ) {
+            attendanceMap[eventId] =
+              "present";
           }
-        );
+        });
 
         setAttendanceStatus(
           attendanceMap
@@ -1225,7 +1207,9 @@ function ProfessionalDashboard() {
           await upcomingResponse.json();
 
         setUpcomingEvents(
-          upcomingData
+          Array.isArray(upcomingData)
+            ? upcomingData
+            : []
         );
       }
     } catch (error) {
@@ -1260,58 +1244,43 @@ function ProfessionalDashboard() {
             </h1>
 
             <p className="welcome-text">
-              Welcome back,{" "}
-              {profile.name} 👋
+              Welcome back, {profile.name} 👋
             </p>
 
             <div className="stats-grid">
 
               <div className="stat-card">
-                <h3>
-                  Upcoming Events
-                </h3>
+                <h3>Upcoming Events</h3>
 
                 <h2>
                   {upcomingEvents.length}
                 </h2>
 
-                <p>
-                  Events scheduled
-                </p>
+                <p>Events scheduled</p>
               </div>
 
               <div className="stat-card">
-                <h3>
-                  Event Offers
-                </h3>
+                <h3>Event Offers</h3>
 
                 <h2>
                   {offers.length}
                 </h2>
 
-                <p>
-                  Offers received
-                </p>
+                <p>Offers received</p>
               </div>
 
               <div className="stat-card">
-                <h3>
-                  My Organizers
-                </h3>
+                <h3>My Organizers</h3>
 
                 <h2>
                   {connections.length}
                 </h2>
 
-                <p>
-                  Connected organizers
-                </p>
+                <p>Connected organizers</p>
               </div>
 
               <div className="stat-card">
-                <h3>
-                  Event Requests
-                </h3>
+                <h3>Event Requests</h3>
 
                 <h2>
                   {
@@ -1323,21 +1292,16 @@ function ProfessionalDashboard() {
                   }
                 </h2>
 
-                <p>
-                  Pending requests
-                </p>
+                <p>Pending requests</p>
               </div>
 
             </div>
 
             <div className="dashboard-card">
 
-              <h2>
-                Upcoming Events
-              </h2>
+              <h2>Upcoming Events</h2>
 
-              {upcomingEvents.length ===
-              0 ? (
+              {upcomingEvents.length === 0 ? (
                 <p>
                   No upcoming events.
                 </p>
@@ -1456,128 +1420,201 @@ function ProfessionalDashboard() {
       // =====================================================
       // FIND ORGANIZERS
       // =====================================================
+
       case "organizers":
         return (
           <div className="professional-content">
+
             <h1>Find Organizers</h1>
-      
+
             <p className="section-description">
               Browse organizers and send connection requests.
             </p>
-      
+
             <div className="organizer-grid">
+
               {organizers.length === 0 ? (
-                <p>No organizers found.</p>
+                <p>
+                  No organizers found.
+                </p>
               ) : (
-                const [organizers, setOrganizers] = useState([]);
-const [professionals, setProfessionals] = useState([]);
-const [selectedProfessionals, setSelectedProfessionals] = useState([]);
-const [connectionRequests, setConnectionRequests] = useState([]);
-const [connections, setConnections] = useState([]);
-const [eventAttendance, setEventAttendance] = useState([]);
-const [selectedAttendanceEvent, setSelectedAttendanceEvent] = useState(null);
-const [eventProfessionals, setEventProfessionals] = useState({});
-const [organizerProfile, setOrganizerProfile] = useState(null);
-const [isEditingProfile, setIsEditingProfile] = useState(false);
-const [profileSaving, setProfileSaving] = useState(false);
+                organizers.map(
+                  (organizer) => (
+                    <div
+                      className="organizer-card"
+                      key={
+                        organizer.id
+                      }
+                    >
 
-const [profileForm, setProfileForm] = useState({
-  organization_name: "",
-  phone: "",
-  city: "",
-  address: "",
-  description: "",
-  profile_photo: ""
-});
+                      <div className="organizer-avatar">
+                        {(
+                          organizer.name ||
+                          "O"
+                        )
+                          .charAt(0)
+                          .toUpperCase()}
+                      </div>
 
-const [selectedChat, setSelectedChat] = useState(null);
-const [selectedChatEvent, setSelectedChatEvent] = useState(null);
-const [selectedConversationId, setSelectedConversationId] = useState(null);
-const [chatType, setChatType] = useState("professional");
-const [selectedProfile, setSelectedProfile] = useState(null);
-const [messages, setMessages] = useState([]);
-const [messageText, setMessageText] = useState("");
-                      </button>
-      
-                      {organizer.connection_status === "connected" ? (
-                        <button className="primary-btn" disabled>
-                          Connected
-                        </button>
-                      ) : organizer.connection_status === "pending" ? (
-                        <button className="primary-btn" disabled>
-                          Request Sent
-                        </button>
-                      ) : (
+                      <h3>
+                        {organizer.name ||
+                          "Organizer"}
+                      </h3>
+
+                      <p>
+                        {organizer.company ||
+                          organizer.organization ||
+                          "Event Organizer"}
+                      </p>
+
+                      <p>
+                        📍{" "}
+                        {organizer.location ||
+                          organizer.city ||
+                          "Location not available"}
+                      </p>
+
+                      <div className="button-group">
+
                         <button
-                          className="primary-btn"
-                          disabled={sendingRequest[organizer.id]}
+                          className="secondary-btn"
                           onClick={() =>
-                            sendConnectionRequest(organizer.id)
+                            setSelectedOrganizer(
+                              organizer
+                            )
                           }
                         >
-                          {sendingRequest[organizer.id]
-                            ? "Sending..."
-                            : "Connect"}
+                          View Profile
                         </button>
-                      )}
-      
+
+                        {organizer.connection_status ===
+                        "connected" ? (
+                          <button
+                            className="primary-btn"
+                            disabled
+                          >
+                            Connected
+                          </button>
+                        ) : organizer.connection_status ===
+                          "pending" ? (
+                          <button
+                            className="primary-btn"
+                            disabled
+                          >
+                            Request Sent
+                          </button>
+                        ) : (
+                          <button
+                            className="primary-btn"
+                            disabled={
+                              sendingRequest[
+                                organizer.id
+                              ]
+                            }
+                            onClick={() =>
+                              sendConnectionRequest(
+                                organizer.id
+                              )
+                            }
+                          >
+                            {sendingRequest[
+                              organizer.id
+                            ]
+                              ? "Sending..."
+                              : "Connect"}
+                          </button>
+                        )}
+
+                      </div>
+
                     </div>
-                  </div>
-                ))
+                  )
+                )
               )}
+
             </div>
-      
+
             {selectedOrganizer && (
               <div className="profile-modal-overlay">
+
                 <div className="profile-modal">
-      
+
                   <button
                     className="close-btn"
-                    onClick={() => setSelectedOrganizer(null)}
+                    onClick={() =>
+                      setSelectedOrganizer(
+                        null
+                      )
+                    }
                   >
                     ✕
                   </button>
-      
+
                   <div className="organizer-avatar">
-                    {(selectedOrganizer.name || "O")
+                    {(
+                      selectedOrganizer.name ||
+                      "O"
+                    )
                       .charAt(0)
                       .toUpperCase()}
                   </div>
-      
-                  <h2>{selectedOrganizer.name}</h2>
-      
+
+                  <h2>
+                    {
+                      selectedOrganizer.name
+                    }
+                  </h2>
+
                   <p>
-                    <strong>Company:</strong>{" "}
+                    <strong>
+                      Company:
+                    </strong>{" "}
                     {selectedOrganizer.company ||
                       selectedOrganizer.organization ||
                       "Not available"}
                   </p>
-      
+
                   <p>
-                    <strong>Email:</strong>{" "}
-                    {selectedOrganizer.email || "Not available"}
+                    <strong>
+                      Email:
+                    </strong>{" "}
+                    {selectedOrganizer.email ||
+                      "Not available"}
                   </p>
-      
+
                   <p>
-                    <strong>Phone:</strong>{" "}
-                    {selectedOrganizer.phone || "Not available"}
+                    <strong>
+                      Phone:
+                    </strong>{" "}
+                    {selectedOrganizer.phone ||
+                      "Not available"}
                   </p>
-      
+
                   <p>
-                    <strong>Location:</strong>{" "}
-                    {selectedOrganizer.location || "Not available"}
+                    <strong>
+                      Location:
+                    </strong>{" "}
+                    {selectedOrganizer.location ||
+                      selectedOrganizer.city ||
+                      "Not available"}
                   </p>
-      
+
                   <button
                     className="primary-btn"
-                    onClick={() => setSelectedOrganizer(null)}
+                    onClick={() =>
+                      setSelectedOrganizer(
+                        null
+                      )
+                    }
                   >
                     Close
                   </button>
-      
+
                 </div>
+
               </div>
             )}
+
           </div>
         );
 
@@ -1599,8 +1636,7 @@ const [messageText, setMessageText] = useState("");
                 Event Requests
               </h2>
 
-              {eventRequests.length ===
-              0 ? (
+              {eventRequests.length === 0 ? (
                 <p>
                   No event requests available.
                 </p>
@@ -1813,49 +1849,55 @@ const [messageText, setMessageText] = useState("");
 
             <div className="organizer-grid">
 
-              {connections.map(
-                (organizer) => (
-                  <div
-                    className="organizer-card"
-                    key={
-                      organizer.id
-                    }
-                  >
-
-                    <div className="organizer-avatar">
-                      {(
-                        organizer.name ||
-                        "O"
-                      ).charAt(0)}
-                    </div>
-
-                    <h3>
-                      {organizer.name}
-                    </h3>
-
-                    <p>
-                      {organizer.company ||
-                        "Event Organizer"}
-                    </p>
-
-                    <p>
-                      📍{" "}
-                      {organizer.location ||
-                        ""}
-                    </p>
-
-                    <button
-                      className="secondary-btn"
-                      onClick={() =>
-                        openOrganizerChat(
-                          organizer
-                        )
+              {connections.length === 0 ? (
+                <p>
+                  No connected organizers yet.
+                </p>
+              ) : (
+                connections.map(
+                  (organizer) => (
+                    <div
+                      className="organizer-card"
+                      key={
+                        organizer.id
                       }
                     >
-                      Open Chat
-                    </button>
 
-                  </div>
+                      <div className="organizer-avatar">
+                        {(
+                          organizer.name ||
+                          "O"
+                        ).charAt(0)}
+                      </div>
+
+                      <h3>
+                        {organizer.name}
+                      </h3>
+
+                      <p>
+                        {organizer.company ||
+                          "Event Organizer"}
+                      </p>
+
+                      <p>
+                        📍{" "}
+                        {organizer.location ||
+                          ""}
+                      </p>
+
+                      <button
+                        className="secondary-btn"
+                        onClick={() =>
+                          openOrganizerChat(
+                            organizer
+                          )
+                        }
+                      >
+                        Open Chat
+                      </button>
+
+                    </div>
+                  )
                 )
               )}
 
@@ -2044,8 +2086,7 @@ const [messageText, setMessageText] = useState("");
 
             <div className="dashboard-card">
 
-              {upcomingEvents.length ===
-              0 ? (
+              {upcomingEvents.length === 0 ? (
                 <p>
                   No upcoming events.
                 </p>
@@ -2307,8 +2348,7 @@ const [messageText, setMessageText] = useState("");
                 Attendance History
               </h2>
 
-              {assignedEvents.length ===
-              0 ? (
+              {assignedEvents.length === 0 ? (
                 <p>
                   No attendance records.
                 </p>
@@ -2477,9 +2517,7 @@ const [messageText, setMessageText] = useState("");
 
             <div className="chat-box">
 
-              {/* ================================
-                  LEFT ORGANIZER LIST
-              ================================= */}
+              {/* LEFT ORGANIZER LIST */}
 
               <div className="chat-organizer-list">
 
@@ -2487,14 +2525,11 @@ const [messageText, setMessageText] = useState("");
                   My Organizers
                 </div>
 
-                {chatOrganizers.length ===
-                0 ? (
+                {chatOrganizers.length === 0 ? (
                   <div
                     style={{
-                      padding:
-                        "20px",
-                      color:
-                        "#777",
+                      padding: "20px",
+                      color: "#777",
                     }}
                   >
                     No connected organizers yet.
@@ -2566,9 +2601,7 @@ const [messageText, setMessageText] = useState("");
 
               </div>
 
-              {/* ================================
-                  RIGHT CHAT AREA
-              ================================= */}
+              {/* RIGHT CHAT AREA */}
 
               <div className="chat-main">
 
@@ -2642,7 +2675,9 @@ const [messageText, setMessageText] = useState("");
                         >
 
                           <div>
-                            {message.message}
+                            {
+                              message.message
+                            }
                           </div>
 
                           <small>
@@ -2651,10 +2686,8 @@ const [messageText, setMessageText] = useState("");
                             ).toLocaleTimeString(
                               "en-IN",
                               {
-                                hour:
-                                  "2-digit",
-                                minute:
-                                  "2-digit",
+                                hour: "2-digit",
+                                minute: "2-digit",
                               }
                             )}
                           </small>
@@ -2666,9 +2699,7 @@ const [messageText, setMessageText] = useState("");
 
                 </div>
 
-                {/* ================================
-                    CHAT INPUT
-                ================================= */}
+                {/* CHAT INPUT */}
 
                 <div className="chat-input">
 
@@ -2738,8 +2769,7 @@ const [messageText, setMessageText] = useState("");
               My Events
             </h1>
 
-            {assignedEvents.length ===
-            0 ? (
+            {assignedEvents.length === 0 ? (
               <div className="dashboard-card">
 
                 <p>
@@ -2835,8 +2865,7 @@ const [messageText, setMessageText] = useState("");
 
                       {attendanceStatus[
                         eventId
-                      ] ===
-                      "present" ? (
+                      ] === "present" ? (
                         <p>
                           ✓ Present
                         </p>
