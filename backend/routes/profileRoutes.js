@@ -35,7 +35,10 @@ router.get("/:userId", async (req, res) => {
   try {
     const { userId } = req.params;
 
-    // Get basic user information
+    // ==========================================
+    // GET BASIC USER INFORMATION
+    // ==========================================
+
     const [users] = await db.execute(
       `SELECT id, name, email, role, created_at
        FROM users
@@ -75,7 +78,15 @@ router.get("/:userId", async (req, res) => {
           event_experience,
           certifications,
           languages,
-          expected_rate
+          expected_rate,
+          date_of_birth,
+          gender,
+          address,
+          state,
+          pincode,
+          RIGHT(aadhaar_number, 4) AS aadhaar_last4,
+          aadhaar_verified,
+          profile_photo
          FROM professional_profiles
          WHERE user_id = ?`,
         [userId],
@@ -90,6 +101,10 @@ router.get("/:userId", async (req, res) => {
       }
 
       const professionalProfile = profiles[0];
+
+      // ==========================================
+      // PROFESSIONAL SERVICES
+      // ==========================================
 
       const [services] = await db.execute(
         `SELECT
@@ -150,6 +165,10 @@ router.get("/:userId", async (req, res) => {
       }
 
       const organizerProfile = profiles[0];
+
+      // ==========================================
+      // ORGANIZER SERVICES
+      // ==========================================
 
       const [services] = await db.execute(
         `SELECT
@@ -217,8 +236,22 @@ router.post("/professional", async (req, res) => {
       certifications,
       languages,
       expected_rate,
+
+      // NEW PROFESSIONAL DETAILS
+      date_of_birth,
+      gender,
+      address,
+      state,
+      pincode,
+      aadhaar_number,
+      profile_photo,
+
       services,
     } = req.body;
+
+    // ==========================================
+    // VALIDATE USER ID
+    // ==========================================
 
     if (!user_id) {
       return res.status(400).json({
@@ -226,9 +259,14 @@ router.post("/professional", async (req, res) => {
       });
     }
 
-    // Check user
+    // ==========================================
+    // CHECK USER
+    // ==========================================
+
     const [users] = await db.execute(
-      `SELECT id, role FROM users WHERE id = ?`,
+      `SELECT id, role
+       FROM users
+       WHERE id = ?`,
       [user_id],
     );
 
@@ -244,7 +282,10 @@ router.post("/professional", async (req, res) => {
       });
     }
 
-    // Check whether profile already exists
+    // ==========================================
+    // CHECK WHETHER PROFILE ALREADY EXISTS
+    // ==========================================
+
     const [existingProfile] = await db.execute(
       `SELECT id
        FROM professional_profiles
@@ -254,8 +295,11 @@ router.post("/professional", async (req, res) => {
 
     let professionalId;
 
+    // ==========================================
+    // CREATE PROFESSIONAL PROFILE
+    // ==========================================
+
     if (existingProfile.length === 0) {
-      // CREATE PROFILE
       const [result] = await db.execute(
         `INSERT INTO professional_profiles
         (
@@ -273,9 +317,16 @@ router.post("/professional", async (req, res) => {
           event_experience,
           certifications,
           languages,
-          expected_rate
+          expected_rate,
+          date_of_birth,
+          gender,
+          address,
+          state,
+          pincode,
+          aadhaar_number,
+          profile_photo
         )
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         [
           user_id,
           phone || null,
@@ -292,12 +343,24 @@ router.post("/professional", async (req, res) => {
           certifications || null,
           languages || null,
           expected_rate || null,
+          date_of_birth || null,
+          gender || null,
+          address || null,
+          state || null,
+          pincode || null,
+          aadhaar_number || null,
+          profile_photo || null,
         ],
       );
 
       professionalId = result.insertId;
-    } else {
-      // UPDATE PROFILE
+    }
+
+    // ==========================================
+    // UPDATE PROFESSIONAL PROFILE
+    // ==========================================
+
+    else {
       professionalId = existingProfile[0].id;
 
       await db.execute(
@@ -316,7 +379,14 @@ router.post("/professional", async (req, res) => {
            event_experience = ?,
            certifications = ?,
            languages = ?,
-           expected_rate = ?
+           expected_rate = ?,
+           date_of_birth = ?,
+           gender = ?,
+           address = ?,
+           state = ?,
+           pincode = ?,
+           aadhaar_number = ?,
+           profile_photo = ?
          WHERE user_id = ?`,
         [
           phone || null,
@@ -333,12 +403,22 @@ router.post("/professional", async (req, res) => {
           certifications || null,
           languages || null,
           expected_rate || null,
+          date_of_birth || null,
+          gender || null,
+          address || null,
+          state || null,
+          pincode || null,
+          aadhaar_number || null,
+          profile_photo || null,
           user_id,
         ],
       );
     }
 
-    // Save services
+    // ==========================================
+    // SAVE PROFESSIONAL SERVICES
+    // ==========================================
+
     if (Array.isArray(services)) {
       // Remove previous services
       await db.execute(
@@ -378,6 +458,10 @@ router.post("/professional", async (req, res) => {
       }
     }
 
+    // ==========================================
+    // SUCCESS RESPONSE
+    // ==========================================
+
     res.json({
       message: "Professional profile saved successfully",
       professional_id: professionalId,
@@ -412,15 +496,24 @@ router.post("/organizer", async (req, res) => {
       services,
     } = req.body;
 
+    // ==========================================
+    // VALIDATE USER ID
+    // ==========================================
+
     if (!user_id) {
       return res.status(400).json({
         message: "user_id is required",
       });
     }
 
-    // Check user
+    // ==========================================
+    // CHECK USER
+    // ==========================================
+
     const [users] = await db.execute(
-      `SELECT id, role FROM users WHERE id = ?`,
+      `SELECT id, role
+       FROM users
+       WHERE id = ?`,
       [user_id],
     );
 
@@ -436,7 +529,10 @@ router.post("/organizer", async (req, res) => {
       });
     }
 
-    // Check whether organizer profile already exists
+    // ==========================================
+    // CHECK WHETHER ORGANIZER PROFILE EXISTS
+    // ==========================================
+
     const [existingProfile] = await db.execute(
       `SELECT id
        FROM organizer_profiles
@@ -446,8 +542,11 @@ router.post("/organizer", async (req, res) => {
 
     let organizerId;
 
+    // ==========================================
+    // CREATE ORGANIZER PROFILE
+    // ==========================================
+
     if (existingProfile.length === 0) {
-      // CREATE PROFILE
       const [result] = await db.execute(
         `INSERT INTO organizer_profiles
         (
@@ -478,8 +577,13 @@ router.post("/organizer", async (req, res) => {
       );
 
       organizerId = result.insertId;
-    } else {
-      // UPDATE PROFILE
+    }
+
+    // ==========================================
+    // UPDATE ORGANIZER PROFILE
+    // ==========================================
+
+    else {
       organizerId = existingProfile[0].id;
 
       await db.execute(
@@ -510,7 +614,10 @@ router.post("/organizer", async (req, res) => {
       );
     }
 
-    // Save organizer services
+    // ==========================================
+    // SAVE ORGANIZER SERVICES
+    // ==========================================
+
     if (Array.isArray(services)) {
       // Remove previous services
       await db.execute(
@@ -550,6 +657,10 @@ router.post("/organizer", async (req, res) => {
       }
     }
 
+    // ==========================================
+    // SUCCESS RESPONSE
+    // ==========================================
+
     res.json({
       message: "Organizer profile saved successfully",
       organizer_id: organizerId,
@@ -562,4 +673,5 @@ router.post("/organizer", async (req, res) => {
     });
   }
 });
+
 export default router;

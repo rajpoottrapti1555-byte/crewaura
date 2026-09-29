@@ -1,4 +1,6 @@
+
 import { useEffect, useState } from "react";
+import ProfessionalProfile from "./ProfessionalProfile";
 
 function ProfessionalDashboard() {
   const [activeSection, setActiveSection] = useState("dashboard");
@@ -218,8 +220,7 @@ function ProfessionalDashboard() {
             const attendanceMap = {};
 
             data.forEach((event) => {
-              const eventId =
-                getEventId(event);
+              const eventId = getEventId(event);
 
               if (
                 event.attendance_status ===
@@ -525,10 +526,6 @@ function ProfessionalDashboard() {
             return;
           }
 
-          // ---------------------------------------------------
-          // DISTANCE CALCULATION
-          // ---------------------------------------------------
-
           const toRadians =
             (value) =>
               (value * Math.PI) /
@@ -607,10 +604,6 @@ function ProfessionalDashboard() {
             distance
           );
 
-          // ---------------------------------------------------
-          // 200 METERS LIMIT
-          // ---------------------------------------------------
-
           if (
             distance > 200
           ) {
@@ -622,10 +615,6 @@ function ProfessionalDashboard() {
 
             return;
           }
-
-          // ---------------------------------------------------
-          // CHECK-IN
-          // ---------------------------------------------------
 
           const response =
             await fetch(
@@ -794,10 +783,6 @@ function ProfessionalDashboard() {
         );
       }
 
-      // =====================================================
-      // REFRESH EVENT OFFERS
-      // =====================================================
-
       const offersResponse =
         await fetch(
           `http://localhost:5500/api/professionals/${userId}/event-offers`
@@ -809,10 +794,6 @@ function ProfessionalDashboard() {
 
         setOffers(offersData);
       }
-
-      // =====================================================
-      // REFRESH MY EVENTS
-      // =====================================================
 
       const eventsResponse =
         await fetch(
@@ -850,10 +831,6 @@ function ProfessionalDashboard() {
           attendanceMap
         );
       }
-
-      // =====================================================
-      // REFRESH UPCOMING EVENTS
-      // =====================================================
 
       const upcomingResponse =
         await fetch(
@@ -1040,74 +1017,43 @@ function ProfessionalDashboard() {
       // PROFILE
       // =====================================================
 
-      case "profile":
+        case "profile":
+  return (
+    <div className="professional-content profile-page">
+      <div className="profile-page-header">
+        <div>
+          <h1>My Profile</h1>
+          <p>
+            View and manage your personal and professional information
+          </p>
+        </div>
+      </div>
+
+      <ProfessionalProfile />
+    </div>
+  );
+
+      // =====================================================
+      // EDIT PROFESSIONAL PROFILE
+      // =====================================================
+
+      case "edit-profile":
         return (
           <div className="professional-content">
 
-            <h1>
-              My Profile
-            </h1>
+            <button
+              className="secondary-btn"
+              onClick={() =>
+                setActiveSection("profile")
+              }
+              style={{
+                marginBottom: "20px",
+              }}
+            >
+              ← Back to My Profile
+            </button>
 
-            <div className="profile-card">
-
-              <div className="profile-avatar">
-                {profile.name
-                  ? profile.name.charAt(0)
-                  : "P"}
-              </div>
-
-              <h2>
-                {profile.name}
-              </h2>
-
-              <p>
-                Professional / Event Worker
-              </p>
-
-              <div className="profile-details">
-
-                <p>
-                  <strong>
-                    Email:
-                  </strong>{" "}
-                  {profile.email}
-                </p>
-
-                <p>
-                  <strong>
-                    Phone:
-                  </strong>{" "}
-                  {profile.phone}
-                </p>
-
-                <p>
-                  <strong>
-                    Skill:
-                  </strong>{" "}
-                  {profile.skill}
-                </p>
-
-                <p>
-                  <strong>
-                    Experience:
-                  </strong>{" "}
-                  {profile.experience}
-                </p>
-
-                <p>
-                  <strong>
-                    Location:
-                  </strong>{" "}
-                  {profile.location}
-                </p>
-
-              </div>
-
-              <button className="primary-btn">
-                Edit Profile
-              </button>
-
-            </div>
+            <ProfessionalProfile />
 
           </div>
         );
@@ -2262,6 +2208,10 @@ function ProfessionalDashboard() {
 
           </div>
         );
+
+      // =====================================================
+      // DEFAULT
+      // =====================================================
 
       default:
         return null;

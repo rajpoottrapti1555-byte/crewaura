@@ -9,14 +9,30 @@ import OrganizerRoutes from "./routes/OrganizerRoutes.js";
 import professionalRoutes from "./routes/professionalRoutes.js";
 import connectionRoutes from "./routes/connectionRoutes.js";
 import messageRoutes from "./routes/messageRoutes.js";
+import profileRoutes from "./routes/profileRoutes.js";
 
 dotenv.config();
 
 const app = express();
 
-app.use(cors());
+/* =========================================================
+   MIDDLEWARE
+========================================================= */
 
+app.use(cors());
 app.use(express.json());
+
+/* =========================================================
+   PROFILE TEST ROUTE
+========================================================= */
+
+
+
+/* =========================================================
+   PROFILE
+========================================================= */
+
+app.use("/api/profile", profileRoutes);
 
 /* =========================================================
    AUTH
@@ -65,7 +81,7 @@ app.use("/api/messages", messageRoutes);
 ========================================================= */
 
 app.get("/", (req, res) => {
-  res.send("EventSaathi Backend is Running");
+  res.send("TEST SERVER - NEW CODE IS RUNNING");
 });
 
 /* =========================================================
@@ -75,7 +91,5 @@ app.get("/", (req, res) => {
 const PORT = process.env.PORT || 5500;
 
 app.listen(PORT, () => {
-  console.log(
-    `Server running at http://localhost:${PORT}`
-  );
+  console.log(`Server running at http://localhost:${PORT}`);
 });
