@@ -51,7 +51,7 @@ router.post("/", async (req, res) => {
 
     const [assignment] = await db.execute(
       `SELECT professional_id
-       FROM event_professionals
+       FROM event_staff
        WHERE event_id = ?
        AND professional_id IN (?, ?)`,
       [event_id, sender_id, receiver_id],
@@ -186,7 +186,7 @@ router.get("/:eventId/:userId/:otherUserId", async (req, res) => {
 
     const [assignment] = await db.execute(
       `SELECT id
-         FROM event_professionals
+         FROM event_staff
          WHERE event_id = ?
          AND professional_id = ?`,
       [eventId, professionalId],

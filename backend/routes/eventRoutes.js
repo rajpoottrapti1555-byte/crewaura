@@ -51,7 +51,7 @@ router.post("/", async (req, res) => {
         event_date,
         start_time || null,
         end_time || null,
-      ]
+      ],
     );
 
     res.status(201).json({
@@ -91,7 +91,7 @@ router.get("/organizer/:organizerId", async (req, res) => {
        FROM events
        WHERE organizer_id = ?
        ORDER BY event_date DESC`,
-      [organizerId]
+      [organizerId],
     );
 
     res.json(events);
@@ -113,26 +113,31 @@ router.get("/:eventId/professionals", async (req, res) => {
     const { eventId } = req.params;
 
     const [professionals] = await db.execute(
-      `SELECT
-        ep.id,
-        ep.event_id,
-        ep.professional_id,
+      `
+      SELECT
+        es.id AS staff_id,
+        es.event_id,
+        es.professional_id,
+        es.role,
+        es.status,
         u.name,
         u.email
-       FROM event_professionals ep
-       JOIN users u
-         ON ep.professional_id = u.id
-       WHERE ep.event_id = ?
-       ORDER BY u.name ASC`,
-      [eventId]
+      FROM event_staff es
+      JOIN users u
+        ON es.professional_id = u.id
+      WHERE es.event_id = ?
+        AND es.status = 'confirmed'
+      ORDER BY u.name ASC
+      `,
+      [eventId],
     );
 
     res.json(professionals);
   } catch (error) {
-    console.error("Get Selected Professionals Error:", error);
+    console.error("Get Event Professionals Error:", error);
 
     res.status(500).json({
-      message: "Unable to fetch selected professionals",
+      message: "Unable to fetch event professionals",
     });
   }
 });
@@ -159,7 +164,7 @@ router.post("/:eventId/professionals", async (req, res) => {
          WHERE event_id = ?
          AND professional_id = ?
          LIMIT 1`,
-        [eventId, professionalId]
+        [eventId, professionalId],
       );
 
       if (existing.length === 0) {
@@ -167,7 +172,7 @@ router.post("/:eventId/professionals", async (req, res) => {
           `INSERT INTO event_professionals
            (event_id, professional_id)
            VALUES (?, ?)`,
-          [eventId, professionalId]
+          [eventId, professionalId],
         );
       }
     }
@@ -209,7 +214,7 @@ router.get("/:eventId/attendance", async (req, res) => {
          ON ea.professional_id = u.id
        WHERE ea.event_id = ?
        ORDER BY u.name ASC`,
-      [eventId]
+      [eventId],
     );
 
     res.json(attendance);
@@ -278,7 +283,7 @@ router.get("/professional/:professionalId", async (req, res) => {
        AND es.status = 'confirmed'
 
        ORDER BY e.event_date ASC`,
-      [professionalId]
+      [professionalId],
     );
 
     res.json(events);
@@ -323,7 +328,7 @@ router.put("/:eventId/attendance/:professionalId", async (req, res) => {
        WHERE e.id = ?
        AND es.professional_id = ?
        LIMIT 1`,
-      [eventId, professionalId]
+      [eventId, professionalId],
     );
 
     if (eventRows.length === 0) {
@@ -345,7 +350,7 @@ router.put("/:eventId/attendance/:professionalId", async (req, res) => {
        FROM event_attendance
        WHERE event_id = ?
        AND professional_id = ?`,
-      [eventId, professionalId]
+      [eventId, professionalId],
     );
 
     if (existingAttendance.length > 0) {
@@ -357,7 +362,7 @@ router.put("/:eventId/attendance/:professionalId", async (req, res) => {
 
     if (status === "present") {
       const [dateRows] = await db.execute(
-        `SELECT DATE_FORMAT(CURDATE(), '%Y-%m-%d') AS today`
+        `SELECT DATE_FORMAT(CURDATE(), '%Y-%m-%d') AS today`,
       );
 
       const eventDate = String(event.event_date);
@@ -372,10 +377,7 @@ router.put("/:eventId/attendance/:professionalId", async (req, res) => {
         });
       }
 
-      if (
-        event.event_latitude === null ||
-        event.event_longitude === null
-      ) {
+      if (event.event_latitude === null || event.event_longitude === null) {
         return res.status(400).json({
           message: "Event location coordinates are not available",
         });
@@ -406,13 +408,9 @@ router.put("/:eventId/attendance/:professionalId", async (req, res) => {
       const eventLatitude = Number(event.event_latitude);
       const eventLongitude = Number(event.event_longitude);
 
-      const dLatitude = toRadians(
-        currentLatitude - eventLatitude
-      );
+      const dLatitude = toRadians(currentLatitude - eventLatitude);
 
-      const dLongitude = toRadians(
-        currentLongitude - eventLongitude
-      );
+      const dLongitude = toRadians(currentLongitude - eventLongitude);
 
       const a =
         Math.sin(dLatitude / 2) ** 2 +
@@ -421,19 +419,13 @@ router.put("/:eventId/attendance/:professionalId", async (req, res) => {
           Math.sin(dLongitude / 2) ** 2;
 
       const distance =
-        2 *
-        earthRadius *
-        Math.atan2(
-          Math.sqrt(a),
-          Math.sqrt(1 - a)
-        );
+        2 * earthRadius * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 
       const ATTENDANCE_RADIUS = 200;
 
       if (distance > ATTENDANCE_RADIUS) {
         return res.status(403).json({
-          message:
-            "You are too far from the event location to mark attendance",
+          message: "You are too far from the event location to mark attendance",
           distance: Math.round(distance),
           allowedRadius: ATTENDANCE_RADIUS,
         });
@@ -450,12 +442,7 @@ router.put("/:eventId/attendance/:professionalId", async (req, res) => {
           check_in_longitude
         )
         VALUES (?, ?, 'present', NOW(), ?, ?)`,
-        [
-          eventId,
-          professionalId,
-          currentLatitude,
-          currentLongitude,
-        ]
+        [eventId, professionalId, currentLatitude, currentLongitude],
       );
 
       const [attendanceRows] = await db.execute(
@@ -469,7 +456,7 @@ router.put("/:eventId/attendance/:professionalId", async (req, res) => {
          FROM event_attendance
          WHERE event_id = ?
          AND professional_id = ?`,
-        [eventId, professionalId]
+        [eventId, professionalId],
       );
 
       return res.json({
@@ -491,7 +478,7 @@ router.put("/:eventId/attendance/:professionalId", async (req, res) => {
         check_in_longitude
       )
       VALUES (?, ?, 'absent', NULL, NULL, NULL, NULL)`,
-      [eventId, professionalId]
+      [eventId, professionalId],
     );
 
     return res.json({
@@ -514,20 +501,11 @@ router.post("/:eventId/attendance/check-in", async (req, res) => {
   try {
     const { eventId } = req.params;
 
-    const {
-      professional_id,
-      latitude,
-      longitude,
-    } = req.body;
+    const { professional_id, latitude, longitude } = req.body;
 
-    if (
-      !professional_id ||
-      latitude === undefined ||
-      longitude === undefined
-    ) {
+    if (!professional_id || latitude === undefined || longitude === undefined) {
       return res.status(400).json({
-        message:
-          "Professional ID, latitude and longitude are required",
+        message: "Professional ID, latitude and longitude are required",
         status: "absent",
       });
     }
@@ -545,7 +523,7 @@ router.post("/:eventId/attendance/check-in", async (req, res) => {
        AND professional_id = ?
        AND status = 'confirmed'
        LIMIT 1`,
-      [eventId, professional_id]
+      [eventId, professional_id],
     );
 
     if (assignment.length === 0) {
@@ -564,7 +542,7 @@ router.post("/:eventId/attendance/check-in", async (req, res) => {
         end_time
        FROM events
        WHERE id = ?`,
-      [eventId]
+      [eventId],
     );
 
     if (events.length === 0) {
@@ -579,10 +557,7 @@ router.post("/:eventId/attendance/check-in", async (req, res) => {
     const eventLatitude = Number(event.latitude);
     const eventLongitude = Number(event.longitude);
 
-    if (
-      !Number.isFinite(eventLatitude) ||
-      !Number.isFinite(eventLongitude)
-    ) {
+    if (!Number.isFinite(eventLatitude) || !Number.isFinite(eventLongitude)) {
       return res.status(400).json({
         message: "Event location is not configured",
         status: "absent",
@@ -608,28 +583,18 @@ router.post("/:eventId/attendance/check-in", async (req, res) => {
 
     const earthRadius = 6371000;
 
-    const latDifference = toRadians(
-      professionalLatitude - eventLatitude
-    );
+    const latDifference = toRadians(professionalLatitude - eventLatitude);
 
-    const lonDifference = toRadians(
-      professionalLongitude - eventLongitude
-    );
+    const lonDifference = toRadians(professionalLongitude - eventLongitude);
 
     const a =
-      Math.sin(latDifference / 2) *
-        Math.sin(latDifference / 2) +
+      Math.sin(latDifference / 2) * Math.sin(latDifference / 2) +
       Math.cos(toRadians(eventLatitude)) *
         Math.cos(toRadians(professionalLatitude)) *
         Math.sin(lonDifference / 2) *
         Math.sin(lonDifference / 2);
 
-    const c =
-      2 *
-      Math.atan2(
-        Math.sqrt(a),
-        Math.sqrt(1 - a)
-      );
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 
     const distance = earthRadius * c;
 
@@ -643,12 +608,11 @@ router.post("/:eventId/attendance/check-in", async (req, res) => {
              check_out = NULL
          WHERE event_id = ?
          AND professional_id = ?`,
-        [eventId, professional_id]
+        [eventId, professional_id],
       );
 
       return res.status(403).json({
-        message:
-          "Attendance rejected. You are outside the event location.",
+        message: "Attendance rejected. You are outside the event location.",
         status: "absent",
         distance: Math.round(distance),
         allowed_radius: allowedRadius,
@@ -661,7 +625,7 @@ router.post("/:eventId/attendance/check-in", async (req, res) => {
            check_in = NOW()
        WHERE event_id = ?
        AND professional_id = ?`,
-      [eventId, professional_id]
+      [eventId, professional_id],
     );
 
     const [attendance] = await db.execute(
@@ -674,17 +638,14 @@ router.post("/:eventId/attendance/check-in", async (req, res) => {
        AND professional_id = ?
        ORDER BY id DESC
        LIMIT 1`,
-      [eventId, professional_id]
+      [eventId, professional_id],
     );
 
     res.json({
       message: "Attendance marked successfully",
       status: "present",
       distance: Math.round(distance),
-      check_in:
-        attendance.length > 0
-          ? attendance[0].check_in
-          : null,
+      check_in: attendance.length > 0 ? attendance[0].check_in : null,
     });
   } catch (error) {
     console.error("GPS Attendance Error:", error);
@@ -704,16 +665,11 @@ router.post("/:eventId/request-professional", async (req, res) => {
   try {
     const { eventId } = req.params;
 
-    const {
-      organizer_id,
-      professional_id,
-      message,
-    } = req.body;
+    const { organizer_id, professional_id, message } = req.body;
 
     if (!organizer_id || !professional_id) {
       return res.status(400).json({
-        message:
-          "Organizer ID and Professional ID are required",
+        message: "Organizer ID and Professional ID are required",
       });
     }
 
@@ -722,13 +678,12 @@ router.post("/:eventId/request-professional", async (req, res) => {
        FROM events
        WHERE id = ?
        AND organizer_id = ?`,
-      [eventId, organizer_id]
+      [eventId, organizer_id],
     );
 
     if (events.length === 0) {
       return res.status(404).json({
-        message:
-          "Event not found or does not belong to this organizer",
+        message: "Event not found or does not belong to this organizer",
       });
     }
 
@@ -738,13 +693,12 @@ router.post("/:eventId/request-professional", async (req, res) => {
        WHERE event_id = ?
        AND professional_id = ?
        LIMIT 1`,
-      [eventId, professional_id]
+      [eventId, professional_id],
     );
 
     if (existingRequest.length > 0) {
       return res.status(409).json({
-        message:
-          `Event request already exists with status: ${existingRequest[0].status}`,
+        message: `Event request already exists with status: ${existingRequest[0].status}`,
       });
     }
 
@@ -762,9 +716,8 @@ router.post("/:eventId/request-professional", async (req, res) => {
         eventId,
         organizer_id,
         professional_id,
-        message ||
-          "You have received an event request.",
-      ]
+        message || "You have received an event request.",
+      ],
     );
 
     res.status(201).json({
@@ -784,14 +737,12 @@ router.post("/:eventId/request-professional", async (req, res) => {
    GET EVENT REQUESTS FOR PROFESSIONAL
 ========================================================= */
 
-router.get(
-  "/professional/:professionalId/event-requests",
-  async (req, res) => {
-    try {
-      const { professionalId } = req.params;
+router.get("/professional/:professionalId/event-requests", async (req, res) => {
+  try {
+    const { professionalId } = req.params;
 
-      const [requests] = await db.execute(
-        `SELECT
+    const [requests] = await db.execute(
+      `SELECT
           er.id AS request_id,
           er.event_id,
           er.organizer_id,
@@ -821,32 +772,29 @@ router.get(
          WHERE er.professional_id = ?
 
          ORDER BY er.created_at DESC`,
-        [professionalId]
-      );
+      [professionalId],
+    );
 
-      res.json(requests);
-    } catch (error) {
-      console.error("Get Event Requests Error:", error);
+    res.json(requests);
+  } catch (error) {
+    console.error("Get Event Requests Error:", error);
 
-      res.status(500).json({
-        message: "Unable to fetch event requests",
-      });
-    }
+    res.status(500).json({
+      message: "Unable to fetch event requests",
+    });
   }
-);
+});
 
 /* =========================================================
    ACCEPT EVENT REQUEST
 ========================================================= */
 
-router.put(
-  "/event-requests/:requestId/accept",
-  async (req, res) => {
-    try {
-      const { requestId } = req.params;
+router.put("/event-requests/:requestId/accept", async (req, res) => {
+  try {
+    const { requestId } = req.params;
 
-      const [requests] = await db.execute(
-        `SELECT
+    const [requests] = await db.execute(
+      `SELECT
           id,
           event_id,
           organizer_id,
@@ -855,50 +803,46 @@ router.put(
          FROM event_requests
          WHERE id = ?
          LIMIT 1`,
-        [requestId]
-      );
+      [requestId],
+    );
 
-      if (requests.length === 0) {
-        return res.status(404).json({
-          message: "Event request not found",
-        });
-      }
+    if (requests.length === 0) {
+      return res.status(404).json({
+        message: "Event request not found",
+      });
+    }
 
-      const request = requests[0];
+    const request = requests[0];
 
-      if (request.status !== "pending") {
-        return res.status(409).json({
-          message:
-            `Request is already ${request.status}`,
-        });
-      }
+    if (request.status !== "pending") {
+      return res.status(409).json({
+        message: `Request is already ${request.status}`,
+      });
+    }
 
-      await db.execute(
-        `UPDATE event_requests
+    await db.execute(
+      `UPDATE event_requests
          SET status = 'accepted'
          WHERE id = ?`,
-        [requestId]
-      );
+      [requestId],
+    );
 
-      /*
+    /*
         Avoid duplicate event_staff assignment.
       */
 
-      const [existingStaff] = await db.execute(
-        `SELECT id
+    const [existingStaff] = await db.execute(
+      `SELECT id
          FROM event_staff
          WHERE event_id = ?
          AND professional_id = ?
          LIMIT 1`,
-        [
-          request.event_id,
-          request.professional_id,
-        ]
-      );
+      [request.event_id, request.professional_id],
+    );
 
-      if (existingStaff.length === 0) {
-        await db.execute(
-          `INSERT INTO event_staff
+    if (existingStaff.length === 0) {
+      await db.execute(
+        `INSERT INTO event_staff
            (
              event_id,
              professional_id,
@@ -906,93 +850,101 @@ router.put(
              status
            )
            VALUES (?, ?, 'Event Staff', 'confirmed')`,
-          [
-            request.event_id,
-            request.professional_id,
-          ]
-        );
-      } else {
-        await db.execute(
-          `UPDATE event_staff
+        [request.event_id, request.professional_id],
+      );
+    } else {
+      await db.execute(
+        `UPDATE event_staff
            SET status = 'confirmed'
            WHERE id = ?`,
-          [existingStaff[0].id]
-        );
-      }
-
-      res.json({
-        message:
-          "Event request accepted successfully",
-        event_id: request.event_id,
-      });
-    } catch (error) {
-      console.error(
-        "Accept Event Request Error:",
-        error
+        [existingStaff[0].id],
       );
-
-      res.status(500).json({
-        message:
-          "Unable to accept event request",
-      });
     }
+
+    res.json({
+      message: "Event request accepted successfully",
+      event_id: request.event_id,
+    });
+  } catch (error) {
+    console.error("Accept Event Request Error:", error);
+
+    res.status(500).json({
+      message: "Unable to accept event request",
+    });
   }
-);
+});
 
 /* =========================================================
    REJECT EVENT REQUEST
 ========================================================= */
 
-router.put(
-  "/event-requests/:requestId/reject",
-  async (req, res) => {
-    try {
-      const { requestId } = req.params;
+router.put("/event-requests/:requestId/reject", async (req, res) => {
+  try {
+    const { requestId } = req.params;
 
-      const [requests] = await db.execute(
-        `SELECT id, status
+    const [requests] = await db.execute(
+      `SELECT id, status
          FROM event_requests
          WHERE id = ?
          LIMIT 1`,
-        [requestId]
-      );
+      [requestId],
+    );
 
-      if (requests.length === 0) {
-        return res.status(404).json({
-          message: "Event request not found",
-        });
-      }
-
-      if (requests[0].status !== "pending") {
-        return res.status(409).json({
-          message:
-            `Request is already ${requests[0].status}`,
-        });
-      }
-
-      await db.execute(
-        `UPDATE event_requests
-         SET status = 'rejected'
-         WHERE id = ?`,
-        [requestId]
-      );
-
-      res.json({
-        message:
-          "Event request rejected successfully",
-      });
-    } catch (error) {
-      console.error(
-        "Reject Event Request Error:",
-        error
-      );
-
-      res.status(500).json({
-        message:
-          "Unable to reject event request",
+    if (requests.length === 0) {
+      return res.status(404).json({
+        message: "Event request not found",
       });
     }
+
+    if (requests[0].status !== "pending") {
+      return res.status(409).json({
+        message: `Request is already ${requests[0].status}`,
+      });
+    }
+
+    await db.execute(
+      `UPDATE event_requests
+         SET status = 'rejected'
+         WHERE id = ?`,
+      [requestId],
+    );
+
+    res.json({
+      message: "Event request rejected successfully",
+    });
+  } catch (error) {
+    console.error("Reject Event Request Error:", error);
+
+    res.status(500).json({
+      message: "Unable to reject event request",
+    });
   }
-);
+});
+
+router.get("/admin/all", async (req, res) => {
+  try {
+    const [events] = await db.execute(`
+      SELECT
+        e.id,
+        e.title,
+        e.description,
+        e.location,
+        e.event_date,
+        e.start_time,
+        e.end_time,
+        u.name AS organizer_name
+      FROM events e
+      JOIN users u ON e.organizer_id = u.id
+      ORDER BY e.event_date DESC
+    `);
+
+    res.json(events);
+  } catch (error) {
+    console.error("Admin Events Error:", error);
+    res.status(500).json({
+      message: "Unable to fetch events",
+    });
+  }
+});
 
 export default router;

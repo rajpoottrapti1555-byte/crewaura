@@ -278,6 +278,10 @@ const [messageText, setMessageText] = useState("");
 
 
 
+
+
+
+
   const fetchConnectionRequests = async () => {
     try {
       if (!user?.id) {
@@ -490,16 +494,126 @@ const updateAttendance = async (eventId, professionalId, status) => {
             const data = await response.json();
   
             if (response.ok) {
-              setMessage(
-                "Event created successfully with GPS location."
-              );
-  
+              console.log("Event created successfully:", data);
+            
+              // Get newly created event ID
+              const eventId =
+                data.event?.id ||
+                data.event?.event_id ||
+                data.id ||
+                data.event_id;
+            
+              if (!eventId) {
+                console.error("Event ID not found in response:", data);
+            
+                setMessage(
+                  "Event created, but event ID was not received."
+                );
+            
+                fetchEvents();
+                return;
+              }
+            
+              console.log("Created Event ID:", eventId);
+            
+              // ==========================================
+              // SEND EVENT REQUEST TO SELECTED PROFESSIONALS
+              // ==========================================
+            
+              if (
+                selectedProfessionals &&
+                selectedProfessionals.length > 0
+              ) {
+                console.log(
+                  "Sending requests to:",
+                  selectedProfessionals
+                );
+            
+                const requestResults = await Promise.all(
+                  selectedProfessionals.map(async (professionalId) => {
+                    try {
+                      const requestResponse = await fetch(
+                        `http://localhost:5500/api/events/${eventId}/request-professional`,
+                        {
+                          method: "POST",
+                          headers: {
+                            "Content-Type": "application/json",
+                          },
+                          body: JSON.stringify({
+                            organizer_id: user.id,
+                            professional_id: professionalId,
+                            message:
+                              "You have received an event request.",
+                          }),
+                        }
+                      );
+            
+                      const requestData =
+                        await requestResponse.json();
+            
+                      console.log(
+                        `Request result for professional ${professionalId}:`,
+                        requestData
+                      );
+            
+                      return {
+                        professionalId,
+                        success: requestResponse.ok,
+                        data: requestData,
+                      };
+                    } catch (error) {
+                      console.error(
+                        `Failed to send request to professional ${professionalId}:`,
+                        error
+                      );
+            
+                      return {
+                        professionalId,
+                        success: false,
+                      };
+                    }
+                  })
+                );
+            
+                console.log(
+                  "All event request results:",
+                  requestResults
+                );
+            
+                const failedRequests =
+                  requestResults.filter(
+                    (result) => !result.success
+                  );
+            
+                if (failedRequests.length === 0) {
+                  setMessage(
+                    "Event created successfully. Requests sent to all selected professionals."
+                  );
+                } else {
+                  setMessage(
+                    `Event created. ${
+                      requestResults.length - failedRequests.length
+                    } requests sent successfully, ${
+                      failedRequests.length
+                    } failed.`
+                  );
+                }
+              } else {
+                setMessage(
+                  "Event created successfully. No professionals were selected."
+                );
+              }
+            
               // Refresh organizer events
               fetchEvents();
+            
+              // Clear selected professionals
+              setSelectedProfessionals([]);
             } else {
               setMessage(
                 data.message || "Unable to create event."
               );
+            
             }
   
           } catch (error) {
@@ -552,6 +666,71 @@ const updateAttendance = async (eventId, professionalId, status) => {
       setMessage(
         "Something went wrong."
       );
+    }
+  };
+  
+  const fetchMessages = async (eventId, otherUserId) => {
+    try {
+      if (!eventId || !otherUserId || !user?.id) return;
+  
+      const response = await fetch(
+        `http://localhost:5500/api/messages/${eventId}/${user.id}/${otherUserId}`
+      );
+  
+      const data = await response.json();
+  
+      if (response.ok) {
+        setMessages(data);
+      } else {
+        setMessage(data.message || "Unable to load messages");
+      }
+    } catch (error) {
+      console.error("Fetch Messages Error:", error);
+      setMessage("Unable to connect to server");
+    }
+  };
+  const handleSendMessage = async (e) => {
+    e.preventDefault();
+  
+    if (!messageText.trim()) return;
+  
+    if (!selectedChatEvent || !selectedChat || !user?.id) {
+      setMessage("Please select an event and professional");
+      return;
+    }
+  
+    try {
+      const response = await fetch(
+        "http://localhost:5500/api/messages",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            event_id: selectedChatEvent.id,
+            sender_id: user.id,
+            receiver_id: selectedChat.id,
+            message: messageText.trim(),
+          }),
+        }
+      );
+  
+      const data = await response.json();
+  
+      if (response.ok) {
+        setMessageText("");
+  
+        await fetchMessages(
+          selectedChatEvent.id,
+          selectedChat.id
+        );
+      } else {
+        setMessage(data.message || "Unable to send message");
+      }
+    } catch (error) {
+      console.error("Send Message Error:", error);
+      setMessage("Unable to connect to server");
     }
   };
 
@@ -1415,46 +1594,7 @@ const updateAttendance = async (eventId, professionalId, status) => {
                     : "Not checked in"}
                 </p>
 
-                <div className="attendance-buttons">
-
-                  <button
-                    type="button"
-                    className={
-                      attendance?.status === "present"
-                        ? "attendance-button active-present"
-                        : "attendance-button"
-                    }
-                    onClick={() =>
-                      updateAttendance(
-                        selectedAttendanceEvent,
-                        professional.professional_id,
-                        "present"
-                      )
-                    }
-                  >
-                    ✓ Present
-                  </button>
-
-                  <button
-                    type="button"
-                    className={
-                      attendance?.status === "absent"
-                        ? "attendance-button active-absent"
-                        : "attendance-button"
-                    }
-                    onClick={() =>
-                      updateAttendance(
-                        selectedAttendanceEvent,
-                        professional.professional_id,
-                        "absent"
-                      )
-                    }
-                  >
-                    ✕ Absent
-                  </button>
-
-                </div>
-
+               
               </div>
             );
           }
@@ -1964,6 +2104,11 @@ const updateAttendance = async (eventId, professionalId, status) => {
               email: person.email,
               initials: initials
             });
+          
+            fetchMessages(
+              selectedChatEvent.id,
+              person.professional_id
+            );
           }}
         >
 

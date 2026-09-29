@@ -5,6 +5,7 @@ function AdminDashboard() {
   const [activeSection, setActiveSection] = useState("dashboard");
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [events, setEvents] = useState([]);
 
   const [stats, setStats] = useState({
     professionals: 0,
@@ -35,6 +36,8 @@ function AdminDashboard() {
     }
 
     fetchUsers();
+    fetchEvents();
+
   }, []);
 
   const fetchUsers = async () => {
@@ -72,6 +75,28 @@ function AdminDashboard() {
       setLoading(false);
     }
   };
+
+  const fetchEvents = async () => {
+    try {
+      const response = await fetch(
+        "http://localhost:5500/api/events/admin/all"
+      );
+  
+      const data = await response.json();
+  
+      if (response.ok) {
+        setEvents(data);
+  
+        setStats((previous) => ({
+          ...previous,
+          events: data.length,
+        }));
+      }
+    } catch (error) {
+      console.error("Fetch Admin Events Error:", error);
+    }
+  };
+  
 
   const showSection = (section) => {
     setActiveSection(section);
@@ -457,11 +482,51 @@ function AdminDashboard() {
       case "organizers":
         return renderOrganizers();
 
-      case "events":
-        return renderSimpleSection(
-          "Events",
-          "Manage all events created on CrewAura."
-        );
+     case "events":
+  return (
+    <section className="dashboard-section active">
+      <div className="section-header">
+        <div>
+          <h1>Events</h1>
+          <p>All events created by organizers.</p>
+        </div>
+      </div>
+
+      <div className="content-card">
+        {events.length === 0 ? (
+          <div className="empty-state">
+            No events created yet.
+          </div>
+        ) : (
+          <div className="table-container">
+            <table>
+              <thead>
+                <tr>
+                  <th>Event</th>
+                  <th>Organizer</th>
+                  <th>Location</th>
+                  <th>Date</th>
+                </tr>
+              </thead>
+
+              <tbody>
+                {events.map((event) => (
+                  <tr key={event.id}>
+                    <td>
+                      <strong>{event.title}</strong>
+                    </td>
+                    <td>{event.organizer_name}</td>
+                    <td>{event.location}</td>
+                    <td>{event.event_date}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+    </section>
+  );
 
       case "attendance":
         return renderSimpleSection(
@@ -651,6 +716,9 @@ function AdminDashboard() {
 
     </div>
   );
-}
 
+
+
+
+}
 export default AdminDashboard;
