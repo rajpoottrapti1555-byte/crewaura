@@ -14,9 +14,17 @@ const [connections, setConnections] = useState([]);
 const [eventAttendance, setEventAttendance] = useState([]);
 const [selectedAttendanceEvent, setSelectedAttendanceEvent] = useState(null);
 const [eventProfessionals, setEventProfessionals] = useState({});
-
+const [organizerProfile, setOrganizerProfile] = useState(null);
 const [selectedChat, setSelectedChat] = useState(null);
 const [selectedChatEvent, setSelectedChatEvent] = useState(null);
+
+const [selectedProfile, setSelectedProfile] = useState(null);
+
+
+
+
+
+
 
 const [messages, setMessages] = useState([]);
 const [messageText, setMessageText] = useState("");
@@ -196,10 +204,28 @@ const [messageText, setMessageText] = useState("");
   };
 
 
-  const handleViewProfile = (userId) => {
-    console.log("Viewing profile:", userId);
+  const handleViewProfile = async (userId) => {
+    try {
+      const response = await fetch(
+        `http://localhost:5500/api/profile/${userId}`
+      );
   
-    // Next step me yahan profile page open karenge
+      const data = await response.json();
+  
+      console.log("Professional Profile:", data);
+  
+      if (response.ok) {
+        setSelectedProfile(data);
+      } else {
+        setMessage(
+          data.message || "Unable to load professional profile"
+        );
+      }
+  
+    } catch (error) {
+      console.error("View Profile Error:", error);
+      setMessage("Unable to connect to server");
+    }
   };
   const fetchEvents = async () => {
     if (!user?.id) {
@@ -419,6 +445,7 @@ const updateAttendance = async (eventId, professionalId, status) => {
     fetchProfessionals();
     fetchConnectionRequests();
     fetchConnections();
+    fetchOrganizerProfile();
   }, []);
   useEffect(() => {
     if (!selectedChat || !selectedChatEvent || !user?.id) {
@@ -512,7 +539,7 @@ const updateAttendance = async (eventId, professionalId, status) => {
     }
   };
 
-  
+
   
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -645,6 +672,36 @@ const updateAttendance = async (eventId, professionalId, status) => {
       setMessage(
         "Something went wrong."
       );
+    }
+  };
+
+
+
+
+  const fetchOrganizerProfile = async () => {
+    if (!user?.id) {
+      return;
+    }
+  
+    try {
+      const response = await fetch(
+        `http://localhost:5500/api/profile/${user.id}`
+      );
+  
+      const data = await response.json();
+  
+      console.log("Organizer Profile:", data);
+  
+      if (response.ok) {
+        setOrganizerProfile(data);
+      } else {
+        setMessage(
+          data.message || "Unable to load organizer profile"
+        );
+      }
+    } catch (error) {
+      console.error("Fetch Organizer Profile Error:", error);
+      setMessage("Unable to connect to server");
     }
   };
 
@@ -837,20 +894,25 @@ const updateAttendance = async (eventId, professionalId, status) => {
         </nav>
 
         {/* Organizer */}
+        <div className="crew-profile-avatar">
+  {user?.name
+    ? user.name
+        .split(" ")
+        .map((word) => word[0])
+        .join("")
+        .toUpperCase()
+    : "OR"}
+</div>
 
-        <div className="crew-sidebar-profile">
+<div className="crew-profile-text">
+  <strong>
+    {user?.name || "Organizer"}
+  </strong>
 
-          <div className="crew-profile-avatar">
-            PS
-          </div>
-
-          <div className="crew-profile-text">
-            <strong>Priya Sharma</strong>
-            <span>Event Organizer</span>
-          </div>
-
-        </div>
-        
+  <span>
+    Event Organizer
+  </span>
+</div>
 
       </aside>
 
@@ -1088,8 +1150,8 @@ const updateAttendance = async (eventId, professionalId, status) => {
       <div className="crew-profile-card">
 
         <div className="crew-large-avatar">
-          {user?.name
-            ? user.name
+          {organizerProfile?.user?.name
+            ? organizerProfile.user.name
                 .split(" ")
                 .map((word) => word[0])
                 .join("")
@@ -1097,14 +1159,16 @@ const updateAttendance = async (eventId, professionalId, status) => {
             : "OR"}
         </div>
 
-        <h2>{user?.name || "Organizer"}</h2>
+        <h2>
+          {organizerProfile?.user?.name || "Organizer"}
+        </h2>
 
         <p>
-          Professional Event Organizer
+          Event Organizer
         </p>
 
         <span className="crew-verified">
-          ✓ Aadhaar Verified
+          ✓ Verified Organizer
         </span>
 
       </div>
@@ -1113,34 +1177,41 @@ const updateAttendance = async (eventId, professionalId, status) => {
 
         <div className="crew-info-row">
           <span>Phone</span>
-          <strong>+91 XXXXX XXXXX</strong>
+          <strong>
+            {organizerProfile?.profile?.phone || "Not added"}
+          </strong>
         </div>
 
         <div className="crew-info-row">
           <span>Email</span>
           <strong>
-            {user?.email || "organizer@example.com"}
-          </strong>
-        </div>
-
-        <div className="crew-info-row">
-          <span>Aadhaar</span>
-          <strong>
-            XXXX XXXX 1234
+            {organizerProfile?.user?.email || "Not added"}
           </strong>
         </div>
 
         <div className="crew-info-row">
           <span>Address</span>
           <strong>
-            Bhopal, Madhya Pradesh
+            {organizerProfile?.profile?.address ||
+              organizerProfile?.profile?.city ||
+              "Not added"}
           </strong>
         </div>
 
         <div className="crew-info-row">
           <span>Organization</span>
           <strong>
-            CrewAura Events
+            {organizerProfile?.profile?.organization_name ||
+              "Not added"}
+          </strong>
+        </div>
+
+        <div className="crew-info-row">
+          <span>Experience</span>
+          <strong>
+            {organizerProfile?.profile?.experience_years
+              ? `${organizerProfile.profile.experience_years} Years`
+              : "Not added"}
           </strong>
         </div>
 
@@ -1148,39 +1219,8 @@ const updateAttendance = async (eventId, professionalId, status) => {
 
     </div>
 
-  
-
-              <div className="crew-form-card">
-
-                <h2>Organization Information</h2>
-
-                <div className="crew-form-grid">
-
-                  <div className="crew-form-group">
-                    <label>Organization Name</label>
-                    <input
-                      type="text"
-                      value="CrewAura Events"
-                      readOnly
-                    />
-                  </div>
-
-                  <div className="crew-form-group">
-                    <label>Organization Type</label>
-                    <input
-                      type="text"
-                      value="Event Management"
-                      readOnly
-                    />
-                  </div>
-
-                </div>
-
-              </div>
-
-            </section>
-          )}
-
+  </section>
+)}
           {/* ================= CREATE EVENT ================= */}
 
           {activeSection === "createEvent" && (
@@ -1338,6 +1378,113 @@ const updateAttendance = async (eventId, professionalId, status) => {
 
             </section>
           )}
+
+
+{selectedProfile && (
+  <section className="crew-section">
+
+    <div className="crew-form-card">
+
+      <div className="crew-section-heading">
+
+        <div>
+          <h2>Professional Profile</h2>
+          <p>
+            Professional details
+          </p>
+        </div>
+
+        <button
+          type="button"
+          className="crew-secondary-button"
+          onClick={() => setSelectedProfile(null)}
+        >
+          Close
+        </button>
+
+      </div>
+
+      <div className="crew-profile-layout">
+
+        <div className="crew-profile-card">
+
+          <div className="crew-large-avatar">
+            {selectedProfile?.user?.name
+              ? selectedProfile.user.name
+                  .split(" ")
+                  .map((word) => word[0])
+                  .join("")
+                  .toUpperCase()
+              : "PR"}
+          </div>
+
+          <h2>
+            {selectedProfile?.user?.name || "Professional"}
+          </h2>
+
+          <p>
+            Event Professional
+          </p>
+
+        </div>
+
+        <div className="crew-profile-information">
+
+          <div className="crew-info-row">
+            <span>Email</span>
+            <strong>
+              {selectedProfile?.user?.email || "Not available"}
+            </strong>
+          </div>
+
+          <div className="crew-info-row">
+            <span>Phone</span>
+            <strong>
+              {selectedProfile?.profile?.phone || "Not available"}
+            </strong>
+          </div>
+
+          <div className="crew-info-row">
+            <span>Skills</span>
+            <strong>
+              {selectedProfile?.services
+                ?.map((service) => service.service_name)
+                .join(", ") || "Not available"}
+            </strong>
+          </div>
+
+          <div className="crew-info-row">
+            <span>Experience</span>
+            <strong>
+              {selectedProfile?.profile?.experience_years
+                ? `${selectedProfile.profile.experience_years} Years`
+                : "Not available"}
+            </strong>
+          </div>
+
+          <div className="crew-info-row">
+            <span>Location</span>
+            <strong>
+              {selectedProfile?.profile?.city || "Not available"}
+            </strong>
+          </div>
+
+          <div className="crew-info-row">
+            <span>Rating</span>
+            <strong>
+              {selectedProfile?.profile?.rating || "Not rated"}
+            </strong>
+          </div>
+
+        </div>
+
+      </div>
+
+    </div>
+
+  </section>
+)}
+
 
 {/* ================= MY EVENTS ================= */}
 {activeSection === "events" && (
@@ -1625,77 +1772,76 @@ const updateAttendance = async (eventId, professionalId, status) => {
 
           {/* ================= PROFESSIONALS ================= */}
 
-          {activeSection === "workers" && (
-  <section className="crew-section">
+          {selectedProfile && (
+  <div className="crew-profile-modal">
+    <div className="crew-profile-card">
 
-    <div className="crew-section-heading">
-      <div>
-        <h2>Find Professionals</h2>
-        <p>
-          Find verified professionals for your events.
-        </p>
+      <button
+        className="crew-close-btn"
+        onClick={() => setSelectedProfile(null)}
+      >
+        ×
+      </button>
+
+      <div className="crew-profile-avatar">
+        {selectedProfile.user?.name
+          ? selectedProfile.user.name
+              .split(" ")
+              .map((word) => word[0])
+              .join("")
+              .toUpperCase()
+          : "PR"}
       </div>
+
+      <h2>{selectedProfile.user?.name}</h2>
+
+      <p>
+        📧 {selectedProfile.user?.email}
+      </p>
+
+      {selectedProfile.profile && (
+        <>
+          <hr />
+
+          <p>
+            📍 <strong>City:</strong>{" "}
+            {selectedProfile.profile.city || "Not specified"}
+          </p>
+
+          <p>
+            💼 <strong>Experience:</strong>{" "}
+            {selectedProfile.profile.experience_years || 0} years
+          </p>
+
+          <p>
+            📞 <strong>Phone:</strong>{" "}
+            {selectedProfile.profile.phone || "Not specified"}
+          </p>
+
+          <p>
+            📝 <strong>Bio:</strong>{" "}
+            {selectedProfile.profile.bio || "No bio available"}
+          </p>
+        </>
+      )}
+
+      {selectedProfile.services &&
+        selectedProfile.services.length > 0 && (
+          <>
+            <h3>Services</h3>
+
+            <div className="crew-service-list">
+              {selectedProfile.services.map((service) => (
+                <span key={service.id}>
+                  {service.name}
+                </span>
+              ))}
+            </div>
+          </>
+        )}
+
     </div>
-
-    {professionals.length === 0 ? (
-      <div className="crew-empty-state">
-        <div className="empty-icon">♧</div>
-
-        <h3>No professionals found</h3>
-
-        <p>
-          Registered professionals will appear here.
-        </p>
-      </div>
-    ) : (
-      <div className="crew-people-grid">
-
-        {professionals.map((professional) => (
-          <div
-            className="crew-person-card"
-            key={professional.id}
-          >
-
-            <div className="crew-person-avatar">
-              {professional.name
-                ? professional.name
-                    .split(" ")
-                    .map((word) => word[0])
-                    .join("")
-                    .toUpperCase()
-                : "PR"}
-            </div>
-
-            <h3>{professional.name}</h3>
-
-            <p>
-              Event Professional
-            </p>
-
-            <span>
-              📧 {professional.email}
-            </span>
-
-            <div className="crew-rating">
-              ★ Profile
-            </div>
-
-            <button
-              className="crew-primary-button"
-              onClick={() =>
-                handleViewProfile(professional.name)
-              }
-            >
-              View Profile
-            </button>
-
-          </div>
-        ))}
-
-      </div>
-    )}
-
-  </section>
+  </div>
 )}
           {/* ================= REQUESTS ================= */}
 
