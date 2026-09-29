@@ -63,7 +63,7 @@ app.use("/api/organizers", OrganizerRoutes);
 ========================================================= */
 
 app.use("/api/professionals", professionalRoutes);
-
+app.use("/api/profile", profileRoutes);
 /* =========================================================
    CONNECTIONS
 ========================================================= */
@@ -92,4 +92,8 @@ const PORT = process.env.PORT || 5500;
 
 app.listen(PORT, () => {
   console.log(`Server running at http://localhost:${PORT}`);
+<<<<<<< Updated upstream
 });
+=======
+});
+>>>>>>> Stashed changes
