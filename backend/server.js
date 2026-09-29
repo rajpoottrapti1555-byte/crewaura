@@ -10,7 +10,7 @@ import eventRoutes from "./routes/eventRoutes.js";
 import OrganizerRoutes from "./routes/OrganizerRoutes.js";
 import professionalRoutes from "./routes/professionalRoutes.js";
 import connectionRoutes from "./routes/connectionRoutes.js";
-
+import messageRoutes from "./routes/messageRoutes.js";
 dotenv.config();
 
 const app = express();
@@ -35,6 +35,9 @@ app.use("/api/professionals", professionalRoutes);
 
 //connectionroutes
 app.use("/api/connections", connectionRoutes);
+
+//for message routes
+app.use("/api/messages", messageRoutes);
 
 // Home route
 
