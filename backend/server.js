@@ -9,6 +9,9 @@ import OrganizerRoutes from "./routes/OrganizerRoutes.js";
 import professionalRoutes from "./routes/professionalRoutes.js";
 import connectionRoutes from "./routes/connectionRoutes.js";
 import messageRoutes from "./routes/messageRoutes.js";
+import serviceRoutes from "./routes/serviceRoutes.js";
+import profileRoutes from "./routes/profileRoutes.js";
+
 dotenv.config();
 
 const app = express();
@@ -46,17 +49,14 @@ app.use("/api/professionals", professionalRoutes);
 // ===============================
 app.use("/api/connections", connectionRoutes);
 
-<<<<<<< HEAD
 //for message routes
 app.use("/api/messages", messageRoutes);
 
-// Home route
+app.use("/api/services", serviceRoutes);
 
-=======
-// ===============================
+app.use("/api/profile", profileRoutes);
 // HOME ROUTE
-// ===============================
->>>>>>> f55030000c660fad2f2d46c642e67a117f8d662e
+
 app.get("/", (req, res) => {
   res.send("EventSaathi Backend is Running");
 });

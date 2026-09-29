@@ -27,7 +27,6 @@ router.get("/", async (req, res) => {
   }
 });
 
-
 /* =========================================================
    GET PROFESSIONAL PROFILE
    GET /api/professionals/profile/:userId
@@ -75,7 +74,6 @@ router.get("/profile/:userId", async (req, res) => {
     });
   }
 });
-
 
 /* =========================================================
    UPDATE PROFESSIONAL PROFILE
@@ -158,7 +156,6 @@ router.put("/profile/:userId", async (req, res) => {
   }
 });
 
-
 /* =========================================================
    GET ALL ORGANIZERS
    Used by Professional Dashboard → Find Organizers
@@ -193,7 +190,6 @@ router.get("/organizers", async (req, res) => {
     });
   }
 });
-
 
 /* =========================================================
    GET PROFESSIONAL'S CONNECTIONS
@@ -258,7 +254,6 @@ router.get("/:userId/connections", async (req, res) => {
   }
 });
 
-
 /* =========================================================
    GET CONNECTION REQUESTS RECEIVED BY PROFESSIONAL
    GET /api/professionals/:userId/connection-requests
@@ -300,7 +295,6 @@ router.get("/:userId/connection-requests", async (req, res) => {
     });
   }
 });
-
 
 /* =========================================================
    GET PROFESSIONAL'S EVENT OFFERS
@@ -363,7 +357,6 @@ router.get("/:userId/event-offers", async (req, res) => {
   }
 });
 
-
 /* =========================================================
    ACCEPT EVENT OFFER
    PUT /api/professionals/event-offers/:staffId/accept
@@ -399,7 +392,6 @@ router.put("/event-offers/:staffId/accept", async (req, res) => {
   }
 });
 
-
 /* =========================================================
    REJECT EVENT OFFER
    PUT /api/professionals/event-offers/:staffId/reject
@@ -434,7 +426,6 @@ router.put("/event-offers/:staffId/reject", async (req, res) => {
     });
   }
 });
-
 
 /* =========================================================
    GET PROFESSIONAL'S UPCOMING EVENTS
@@ -486,6 +477,5 @@ router.get("/:userId/upcoming-events", async (req, res) => {
     });
   }
 });
-
 
 export default router;
