@@ -1,4 +1,3 @@
-
 import { useEffect, useState } from "react";
 import ProfessionalProfile from "./ProfessionalProfile";
 
@@ -38,6 +37,28 @@ function ProfessionalDashboard() {
   const userId = storedUser.id;
 
   // =========================================================
+  // CHAT STATE
+  // =========================================================
+
+  const [chatOrganizers, setChatOrganizers] = useState([]);
+  const [selectedOrganizer, setSelectedOrganizer] =
+    useState(null);
+
+  const [chatConversationId, setChatConversationId] =
+    useState(null);
+
+  const [chatMessages, setChatMessages] = useState([]);
+  const [chatInput, setChatInput] = useState("");
+  const [chatLoading, setChatLoading] = useState(false);
+  const [chatSending, setChatSending] = useState(false);
+
+  // =========================================================
+  // BACKEND URL
+  // =========================================================
+
+  const BACKEND_URL = "http://localhost:5500";
+
+  // =========================================================
   // GET EVENT ID
   // =========================================================
 
@@ -67,7 +88,7 @@ function ProfessionalDashboard() {
 
         try {
           const response = await fetch(
-            `http://localhost:5500/api/professionals/profile/${userId}`
+            `${BACKEND_URL}/api/professionals/profile/${userId}`
           );
 
           if (response.ok) {
@@ -104,7 +125,7 @@ function ProfessionalDashboard() {
 
         try {
           const response = await fetch(
-            `http://localhost:5500/api/professionals/${userId}/connections`
+            `${BACKEND_URL}/api/professionals/${userId}/connections`
           );
 
           if (response.ok) {
@@ -124,7 +145,7 @@ function ProfessionalDashboard() {
 
         try {
           const response = await fetch(
-            `http://localhost:5500/api/professionals/${userId}/connection-requests`
+            `${BACKEND_URL}/api/professionals/${userId}/connection-requests`
           );
 
           if (response.ok) {
@@ -144,7 +165,7 @@ function ProfessionalDashboard() {
 
         try {
           const response = await fetch(
-            `http://localhost:5500/api/events/professional/${userId}/event-requests`
+            `${BACKEND_URL}/api/events/professional/${userId}/event-requests`
           );
 
           if (response.ok) {
@@ -169,7 +190,7 @@ function ProfessionalDashboard() {
 
         try {
           const response = await fetch(
-            `http://localhost:5500/api/professionals/${userId}/event-offers`
+            `${BACKEND_URL}/api/professionals/${userId}/event-offers`
           );
 
           if (response.ok) {
@@ -195,7 +216,7 @@ function ProfessionalDashboard() {
 
         try {
           const response = await fetch(
-            `http://localhost:5500/api/professionals/${userId}/upcoming-events`
+            `${BACKEND_URL}/api/professionals/${userId}/upcoming-events`
           );
 
           if (response.ok) {
@@ -232,7 +253,7 @@ function ProfessionalDashboard() {
 
         try {
           const response = await fetch(
-            `http://localhost:5500/api/events/professional/${userId}`
+            `${BACKEND_URL}/api/events/professional/${userId}`
           );
 
           if (response.ok) {
@@ -287,6 +308,266 @@ function ProfessionalDashboard() {
   }, [userId]);
 
   // =========================================================
+  // LOAD CHAT ORGANIZERS
+  // =========================================================
+
+  useEffect(() => {
+    const loadChatOrganizers = async () => {
+      try {
+        if (!userId) {
+          console.error(
+            "Cannot load chat organizers: userId missing"
+          );
+          return;
+        }
+
+        const response = await fetch(
+          `${BACKEND_URL}/api/connections/${userId}`
+        );
+
+        const data = await response.json();
+
+        if (!response.ok) {
+          throw new Error(
+            data.message ||
+              "Unable to load connected organizers."
+          );
+        }
+
+        console.log(
+          "Chat Organizers:",
+          data
+        );
+
+        setChatOrganizers(
+          Array.isArray(data)
+            ? data
+            : []
+        );
+      } catch (error) {
+        console.error(
+          "Chat organizers loading error:",
+          error
+        );
+
+        setChatOrganizers([]);
+      }
+    };
+
+    loadChatOrganizers();
+  }, [userId]);
+
+  // =========================================================
+  // OPEN PERSONAL CHAT
+  // =========================================================
+
+  const openOrganizerChat = async (
+    organizer
+  ) => {
+    try {
+      if (!userId) {
+        alert(
+          "Professional user ID not found."
+        );
+        return;
+      }
+
+      const organizerId = Number(
+        organizer.user_id ??
+          organizer.id ??
+          organizer.organizer_id
+      );
+
+      if (!organizerId) {
+        alert(
+          "Organizer ID is missing."
+        );
+        return;
+      }
+
+      setChatLoading(true);
+
+      setSelectedOrganizer({
+        ...organizer,
+        user_id: organizerId,
+      });
+
+      setChatMessages([]);
+      setChatConversationId(null);
+
+      // =====================================================
+      // CREATE / GET PERSONAL CONVERSATION
+      // =====================================================
+
+      const conversationResponse =
+        await fetch(
+          `${BACKEND_URL}/api/conversations/personal`,
+          {
+            method: "POST",
+            headers: {
+              "Content-Type":
+                "application/json",
+            },
+            body: JSON.stringify({
+              user1_id: Number(userId),
+              user2_id: organizerId,
+            }),
+          }
+        );
+
+      const conversationData =
+        await conversationResponse.json();
+
+      if (!conversationResponse.ok) {
+        throw new Error(
+          conversationData.message ||
+            "Unable to open conversation."
+        );
+      }
+
+      const conversationId =
+        conversationData.conversation_id;
+
+      setChatConversationId(
+        conversationId
+      );
+
+      // =====================================================
+      // LOAD MESSAGES
+      // =====================================================
+
+      const messagesResponse =
+        await fetch(
+          `${BACKEND_URL}/api/conversations/${conversationId}/messages?userId=${userId}`
+        );
+
+      const messagesData =
+        await messagesResponse.json();
+
+      if (!messagesResponse.ok) {
+        throw new Error(
+          messagesData.message ||
+            "Unable to load messages."
+        );
+      }
+
+      setChatMessages(
+        Array.isArray(messagesData)
+          ? messagesData
+          : []
+      );
+    } catch (error) {
+      console.error(
+        "Open organizer chat error:",
+        error
+      );
+
+      alert(
+        error.message ||
+          "Unable to open organizer chat."
+      );
+    } finally {
+      setChatLoading(false);
+    }
+  };
+
+  // =========================================================
+  // SEND CHAT MESSAGE
+  // =========================================================
+
+  const sendChatMessage = async () => {
+    const message =
+      chatInput.trim();
+
+    if (!message) {
+      return;
+    }
+
+    if (!chatConversationId) {
+      alert(
+        "Please select an organizer first."
+      );
+      return;
+    }
+
+    if (!userId) {
+      alert(
+        "Professional user ID not found."
+      );
+      return;
+    }
+
+    try {
+      setChatSending(true);
+
+      const response =
+        await fetch(
+          `${BACKEND_URL}/api/conversations/${chatConversationId}/messages`,
+          {
+            method: "POST",
+            headers: {
+              "Content-Type":
+                "application/json",
+            },
+            body: JSON.stringify({
+              sender_id: Number(userId),
+              message: message,
+            }),
+          }
+        );
+
+      const data =
+        await response.json();
+
+      if (!response.ok) {
+        throw new Error(
+          data.message ||
+            "Unable to send message."
+        );
+      }
+
+      console.log(
+        "Sent message:",
+        data
+      );
+
+      setChatInput("");
+
+      // =====================================================
+      // RELOAD MESSAGES
+      // =====================================================
+
+      const messagesResponse =
+        await fetch(
+          `${BACKEND_URL}/api/conversations/${chatConversationId}/messages?userId=${userId}`
+        );
+
+      const messagesData =
+        await messagesResponse.json();
+
+      if (messagesResponse.ok) {
+        setChatMessages(
+          Array.isArray(messagesData)
+            ? messagesData
+            : []
+        );
+      }
+    } catch (error) {
+      console.error(
+        "Send chat message error:",
+        error
+      );
+
+      alert(
+        error.message ||
+          "Unable to send message."
+      );
+    } finally {
+      setChatSending(false);
+    }
+  };
+
+  // =========================================================
   // EVENT REQUEST ACCEPT / REJECT
   // =========================================================
 
@@ -296,16 +577,18 @@ function ProfessionalDashboard() {
   ) => {
     try {
       const response = await fetch(
-        `http://localhost:5500/api/events/event-requests/${requestId}/${action}`,
+        `${BACKEND_URL}/api/events/event-requests/${requestId}/${action}`,
         {
           method: "PUT",
           headers: {
-            "Content-Type": "application/json",
+            "Content-Type":
+              "application/json",
           },
         }
       );
 
-      const data = await response.json();
+      const data =
+        await response.json();
 
       if (!response.ok) {
         alert(
@@ -327,7 +610,7 @@ function ProfessionalDashboard() {
 
       const requestsResponse =
         await fetch(
-          `http://localhost:5500/api/events/professional/${userId}/event-requests`
+          `${BACKEND_URL}/api/events/professional/${userId}/event-requests`
         );
 
       if (requestsResponse.ok) {
@@ -342,7 +625,7 @@ function ProfessionalDashboard() {
       if (action === "accept") {
         const eventsResponse =
           await fetch(
-            `http://localhost:5500/api/events/professional/${userId}`
+            `${BACKEND_URL}/api/events/professional/${userId}`
           );
 
         if (eventsResponse.ok) {
@@ -379,7 +662,7 @@ function ProfessionalDashboard() {
 
         const upcomingResponse =
           await fetch(
-            `http://localhost:5500/api/professionals/${userId}/upcoming-events`
+            `${BACKEND_URL}/api/professionals/${userId}/upcoming-events`
           );
 
         if (upcomingResponse.ok) {
@@ -413,16 +696,18 @@ function ProfessionalDashboard() {
   ) => {
     try {
       const response = await fetch(
-        `http://localhost:5500/api/professionals/connection-requests/${requestId}/${action}`,
+        `${BACKEND_URL}/api/professionals/connection-requests/${requestId}/${action}`,
         {
           method: "PUT",
           headers: {
-            "Content-Type": "application/json",
+            "Content-Type":
+              "application/json",
           },
         }
       );
 
-      const data = await response.json();
+      const data =
+        await response.json();
 
       if (!response.ok) {
         alert(
@@ -440,7 +725,7 @@ function ProfessionalDashboard() {
 
       const requestsResponse =
         await fetch(
-          `http://localhost:5500/api/professionals/${userId}/connection-requests`
+          `${BACKEND_URL}/api/professionals/${userId}/connection-requests`
         );
 
       if (requestsResponse.ok) {
@@ -454,7 +739,7 @@ function ProfessionalDashboard() {
 
       const connectionsResponse =
         await fetch(
-          `http://localhost:5500/api/professionals/${userId}/connections`
+          `${BACKEND_URL}/api/professionals/${userId}/connections`
         );
 
       if (connectionsResponse.ok) {
@@ -463,6 +748,27 @@ function ProfessionalDashboard() {
 
         setConnections(
           connectionsData
+        );
+      }
+
+      // Refresh chat organizers too
+      const chatConnectionsResponse =
+        await fetch(
+          `${BACKEND_URL}/api/connections/${userId}`
+        );
+
+      if (
+        chatConnectionsResponse.ok
+      ) {
+        const chatConnectionsData =
+          await chatConnectionsResponse.json();
+
+        setChatOrganizers(
+          Array.isArray(
+            chatConnectionsData
+          )
+            ? chatConnectionsData
+            : []
         );
       }
     } catch (error) {
@@ -695,7 +1001,7 @@ function ProfessionalDashboard() {
 
           const response =
             await fetch(
-              `http://localhost:5500/api/events/${eventId}/attendance/check-in`,
+              `${BACKEND_URL}/api/events/${eventId}/attendance/check-in`,
               {
                 method: "POST",
                 headers: {
@@ -738,7 +1044,7 @@ function ProfessionalDashboard() {
 
           const assignedResponse =
             await fetch(
-              `http://localhost:5500/api/events/professional/${userId}`
+              `${BACKEND_URL}/api/events/professional/${userId}`
             );
 
           if (
@@ -829,7 +1135,7 @@ function ProfessionalDashboard() {
       );
 
       const response = await fetch(
-        `http://localhost:5500/api/professionals/event-offers/${offerId}/${action}`,
+        `${BACKEND_URL}/api/professionals/event-offers/${offerId}/${action}`,
         {
           method: "PUT",
           headers: {
@@ -862,7 +1168,7 @@ function ProfessionalDashboard() {
 
       const offersResponse =
         await fetch(
-          `http://localhost:5500/api/professionals/${userId}/event-offers`
+          `${BACKEND_URL}/api/professionals/${userId}/event-offers`
         );
 
       if (offersResponse.ok) {
@@ -874,7 +1180,7 @@ function ProfessionalDashboard() {
 
       const eventsResponse =
         await fetch(
-          `http://localhost:5500/api/events/professional/${userId}`
+          `${BACKEND_URL}/api/events/professional/${userId}`
         );
 
       if (eventsResponse.ok) {
@@ -911,7 +1217,7 @@ function ProfessionalDashboard() {
 
       const upcomingResponse =
         await fetch(
-          `http://localhost:5500/api/professionals/${userId}/upcoming-events`
+          `${BACKEND_URL}/api/professionals/${userId}/upcoming-events`
         );
 
       if (upcomingResponse.ok) {
@@ -1094,21 +1400,30 @@ function ProfessionalDashboard() {
       // PROFILE
       // =====================================================
 
-        case "profile":
-  return (
-    <div className="professional-content profile-page">
-      <div className="profile-page-header">
-        <div>
-          <h1>My Profile</h1>
-          <p>
-            View and manage your personal and professional information
-          </p>
-        </div>
-      </div>
+      case "profile":
+        return (
+          <div className="professional-content profile-page">
 
-      <ProfessionalProfile />
-    </div>
-  );
+            <div className="profile-page-header">
+
+              <div>
+
+                <h1>
+                  My Profile
+                </h1>
+
+                <p>
+                  View and manage your personal and professional information
+                </p>
+
+              </div>
+
+            </div>
+
+            <ProfessionalProfile />
+
+          </div>
+        );
 
       // =====================================================
       // EDIT PROFESSIONAL PROFILE
@@ -1121,10 +1436,13 @@ function ProfessionalDashboard() {
             <button
               className="secondary-btn"
               onClick={() =>
-                setActiveSection("profile")
+                setActiveSection(
+                  "profile"
+                )
               }
               style={{
-                marginBottom: "20px",
+                marginBottom:
+                  "20px",
               }}
             >
               ← Back to My Profile
@@ -1151,34 +1469,34 @@ function ProfessionalDashboard() {
               {organizers.length === 0 ? (
                 <p>No organizers found.</p>
               ) : (
-                organizers.map((organizer) => (
-                  <div className="organizer-card" key={organizer.id}>
-      
-                    <div className="organizer-avatar">
-                      {(organizer.name || "O").charAt(0).toUpperCase()}
-                    </div>
-      
-                    <h3>{organizer.name || "Organizer"}</h3>
-      
-                    <p>
-                      {organizer.company ||
-                        organizer.organization ||
-                        "Event Organizer"}
-                    </p>
-      
-                    <p>
-                      📍 {organizer.location || "Location not available"}
-                    </p>
-      
-                    <div className="organizer-actions">
-      
-                      <button
-                        className="secondary-btn"
-                        onClick={() =>
-                          setSelectedOrganizer(organizer)
-                        }
-                      >
-                        View Profile
+                const [organizers, setOrganizers] = useState([]);
+const [professionals, setProfessionals] = useState([]);
+const [selectedProfessionals, setSelectedProfessionals] = useState([]);
+const [connectionRequests, setConnectionRequests] = useState([]);
+const [connections, setConnections] = useState([]);
+const [eventAttendance, setEventAttendance] = useState([]);
+const [selectedAttendanceEvent, setSelectedAttendanceEvent] = useState(null);
+const [eventProfessionals, setEventProfessionals] = useState({});
+const [organizerProfile, setOrganizerProfile] = useState(null);
+const [isEditingProfile, setIsEditingProfile] = useState(false);
+const [profileSaving, setProfileSaving] = useState(false);
+
+const [profileForm, setProfileForm] = useState({
+  organization_name: "",
+  phone: "",
+  city: "",
+  address: "",
+  description: "",
+  profile_photo: ""
+});
+
+const [selectedChat, setSelectedChat] = useState(null);
+const [selectedChatEvent, setSelectedChatEvent] = useState(null);
+const [selectedConversationId, setSelectedConversationId] = useState(null);
+const [chatType, setChatType] = useState("professional");
+const [selectedProfile, setSelectedProfile] = useState(null);
+const [messages, setMessages] = useState([]);
+const [messageText, setMessageText] = useState("");
                       </button>
       
                       {organizer.connection_status === "connected" ? (
@@ -1526,7 +1844,14 @@ function ProfessionalDashboard() {
                         ""}
                     </p>
 
-                    <button className="secondary-btn">
+                    <button
+                      className="secondary-btn"
+                      onClick={() =>
+                        openOrganizerChat(
+                          organizer
+                        )
+                      }
+                    >
                       Open Chat
                     </button>
 
@@ -1641,7 +1966,9 @@ function ProfessionalDashboard() {
                             <strong>
                               Status:
                             </strong>{" "}
-                            {normalizedOfferStatus}
+                            {
+                              normalizedOfferStatus
+                            }
                           </p>
 
                         </div>
@@ -2150,46 +2477,247 @@ function ProfessionalDashboard() {
 
             <div className="chat-box">
 
-              <div className="chat-header">
+              {/* ================================
+                  LEFT ORGANIZER LIST
+              ================================= */}
 
-                <h3>
-                  Priya Sharma
-                </h3>
+              <div className="chat-organizer-list">
 
-                <span>
-                  Online
-                </span>
+                <div className="chat-list-title">
+                  My Organizers
+                </div>
+
+                {chatOrganizers.length ===
+                0 ? (
+                  <div
+                    style={{
+                      padding:
+                        "20px",
+                      color:
+                        "#777",
+                    }}
+                  >
+                    No connected organizers yet.
+                  </div>
+                ) : (
+                  chatOrganizers.map(
+                    (organizer) => {
+
+                      const organizerId =
+                        Number(
+                          organizer.user_id ??
+                            organizer.id ??
+                            organizer.organizer_id
+                        );
+
+                      const isSelected =
+                        Number(
+                          selectedOrganizer?.user_id
+                        ) ===
+                        organizerId;
+
+                      return (
+                        <div
+                          key={
+                            organizerId
+                          }
+                          className={
+                            isSelected
+                              ? "chat-person active"
+                              : "chat-person"
+                          }
+                          onClick={() =>
+                            openOrganizerChat(
+                              organizer
+                            )
+                          }
+                        >
+
+                          <div className="organizer-avatar">
+
+                            {(
+                              organizer.name ||
+                              "O"
+                            )
+                              .charAt(0)
+                              .toUpperCase()}
+
+                          </div>
+
+                          <div>
+
+                            <strong>
+                              {organizer.name ||
+                                "Organizer"}
+                            </strong>
+
+                            <p>
+                              {organizer.email ||
+                                "Event Organizer"}
+                            </p>
+
+                          </div>
+
+                        </div>
+                      );
+                    }
+                  )
+                )}
 
               </div>
 
-              <div className="messages">
+              {/* ================================
+                  RIGHT CHAT AREA
+              ================================= */}
 
-                <div className="message received">
-                  Hello! Are you available
-                  for our upcoming event?
+              <div className="chat-main">
+
+                <div className="chat-header">
+
+                  <div>
+
+                    <h3>
+                      {selectedOrganizer
+                        ? `Chat with ${
+                            selectedOrganizer.name ||
+                            "Organizer"
+                          }`
+                        : "Select an Organizer"}
+                    </h3>
+
+                    {selectedOrganizer && (
+                      <span>
+                        {selectedOrganizer.email ||
+                          "Connected Organizer"}
+                      </span>
+                    )}
+
+                  </div>
+
                 </div>
 
-                <div className="message sent">
-                  Yes, I am available.
+                <div className="messages">
+
+                  {!selectedOrganizer && (
+                    <div className="empty-chat">
+                      Select an organizer to start chatting.
+                    </div>
+                  )}
+
+                  {selectedOrganizer &&
+                    chatLoading && (
+                      <div className="empty-chat">
+                        Loading messages...
+                      </div>
+                    )}
+
+                  {selectedOrganizer &&
+                    !chatLoading &&
+                    chatMessages.length ===
+                      0 && (
+                      <div className="empty-chat">
+                        No messages yet. Start the conversation.
+                      </div>
+                    )}
+
+                  {chatMessages.map(
+                    (message) => {
+
+                      const isMine =
+                        Number(
+                          message.sender_id
+                        ) ===
+                        Number(userId);
+
+                      return (
+                        <div
+                          key={
+                            message.id
+                          }
+                          className={
+                            isMine
+                              ? "message sent"
+                              : "message received"
+                          }
+                        >
+
+                          <div>
+                            {message.message}
+                          </div>
+
+                          <small>
+                            {new Date(
+                              message.created_at
+                            ).toLocaleTimeString(
+                              "en-IN",
+                              {
+                                hour:
+                                  "2-digit",
+                                minute:
+                                  "2-digit",
+                              }
+                            )}
+                          </small>
+
+                        </div>
+                      );
+                    }
+                  )}
+
                 </div>
 
-                <div className="message received">
-                  Great! I will send you
-                  the event details.
+                {/* ================================
+                    CHAT INPUT
+                ================================= */}
+
+                <div className="chat-input">
+
+                  <input
+                    type="text"
+                    value={
+                      chatInput
+                    }
+                    onChange={(e) =>
+                      setChatInput(
+                        e.target.value
+                      )
+                    }
+                    onKeyDown={(e) => {
+                      if (
+                        e.key ===
+                        "Enter"
+                      ) {
+                        sendChatMessage();
+                      }
+                    }}
+                    placeholder={
+                      selectedOrganizer
+                        ? "Type a message..."
+                        : "Select an organizer first..."
+                    }
+                    disabled={
+                      !selectedOrganizer ||
+                      chatSending
+                    }
+                  />
+
+                  <button
+                    className="primary-btn"
+                    onClick={
+                      sendChatMessage
+                    }
+                    disabled={
+                      !selectedOrganizer ||
+                      !chatInput.trim() ||
+                      chatSending
+                    }
+                  >
+                    {chatSending
+                      ? "Sending..."
+                      : "Send"}
+                  </button>
+
                 </div>
-
-              </div>
-
-              <div className="chat-input">
-
-                <input
-                  type="text"
-                  placeholder="Type a message..."
-                />
-
-                <button className="primary-btn">
-                  Send
-                </button>
 
               </div>
 
@@ -2364,9 +2892,11 @@ function ProfessionalDashboard() {
       <aside className="professional-sidebar">
 
         <div className="sidebar-logo">
+
           <h2>
             CrewAura
           </h2>
+
         </div>
 
         <nav>
@@ -2633,9 +3163,11 @@ function ProfessionalDashboard() {
         <header className="professional-topbar">
 
           <div>
+
             <h2>
               Professional Panel
             </h2>
+
           </div>
 
           <div className="topbar-right">
@@ -2647,9 +3179,11 @@ function ProfessionalDashboard() {
             <div className="top-profile">
 
               <div className="small-avatar">
+
                 {profile.name
                   ? profile.name.charAt(0)
                   : "P"}
+
               </div>
 
               <span>

@@ -10,6 +10,7 @@ import professionalRoutes from "./routes/professionalRoutes.js";
 import connectionRoutes from "./routes/connectionRoutes.js";
 import messageRoutes from "./routes/messageRoutes.js";
 import profileRoutes from "./routes/profileRoutes.js";
+import conversationRoutes from "./routes/conversationRoutes.js";
 
 dotenv.config();
 
@@ -73,6 +74,7 @@ app.use("/api/connections", connectionRoutes);
 ========================================================= */
 
 app.use("/api/messages", messageRoutes);
+app.use("/api/conversations", conversationRoutes);
 
 /* =========================================================
    HOME

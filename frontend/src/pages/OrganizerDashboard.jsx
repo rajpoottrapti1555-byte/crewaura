@@ -1,28 +1,48 @@
+
 import { useEffect, useState } from "react";
 import "./OrganizerDashboard.css";
 
 function OrganizerDashboard() {
-
   const user = JSON.parse(localStorage.getItem("user"));
 
   const [events, setEvents] = useState([]);
-const [organizers, setOrganizers] = useState([]);
-const [professionals, setProfessionals] = useState([]);
-const [selectedProfessionals, setSelectedProfessionals] = useState([]);
-const [connectionRequests, setConnectionRequests] = useState([]);
-const [connections, setConnections] = useState([]);
-const [eventAttendance, setEventAttendance] = useState([]);
-const [selectedAttendanceEvent, setSelectedAttendanceEvent] = useState(null);
-const [eventProfessionals, setEventProfessionals] = useState({});
+  const [organizers, setOrganizers] = useState([]);
+  const [professionals, setProfessionals] = useState([]);
+  const [selectedProfessionals, setSelectedProfessionals] = useState([]);
 
-const [selectedChat, setSelectedChat] = useState(null);
-const [selectedChatEvent, setSelectedChatEvent] = useState(null);
+  const [connectionRequests, setConnectionRequests] = useState([]);
+  const [connections, setConnections] = useState([]);
 
-const [messages, setMessages] = useState([]);
-const [messageText, setMessageText] = useState("");
+  const [eventAttendance, setEventAttendance] = useState([]);
+  const [selectedAttendanceEvent, setSelectedAttendanceEvent] =
+    useState(null);
 
+  const [eventProfessionals, setEventProfessionals] = useState({});
 
+  const [organizerProfile, setOrganizerProfile] = useState(null);
+  const [isEditingProfile, setIsEditingProfile] = useState(false);
+  const [profileSaving, setProfileSaving] = useState(false);
 
+  const [profileForm, setProfileForm] = useState({
+    organization_name: "",
+    phone: "",
+    city: "",
+    address: "",
+    description: "",
+    profile_photo: ""
+  });
+
+  const [selectedChat, setSelectedChat] = useState(null);
+  const [selectedChatEvent, setSelectedChatEvent] = useState(null);
+  const [selectedConversationId, setSelectedConversationId] =
+    useState(null);
+
+  const [chatType, setChatType] = useState("professional");
+
+  const [selectedProfile, setSelectedProfile] = useState(null);
+
+  const [messages, setMessages] = useState([]);
+  const [messageText, setMessageText] = useState("");
 
   const [formData, setFormData] = useState({
     title: "",
@@ -36,7 +56,6 @@ const [messageText, setMessageText] = useState("");
   });
 
   const [message, setMessage] = useState("");
-
   const [activeSection, setActiveSection] = useState("dashboard");
   const [notificationsOpen, setNotificationsOpen] = useState(false);
 
@@ -88,81 +107,76 @@ const [messageText, setMessageText] = useState("");
     setMessage("");
   };
 
+  /* =========================================================
+     CONNECTIONS
+     ========================================================= */
+
   const handleConnect = async (receiverId, receiverName) => {
     try {
-      console.log("CURRENT USER:", user);
-      console.log("SENDER ID:", user?.id);
-      console.log("RECEIVER ID:", receiverId);
-  
       if (!user?.id) {
         setMessage("User login information not found");
         return;
       }
-  
+
       if (!receiverId) {
         setMessage("Professional/Organizer ID not found");
         return;
       }
-  
+
       const response = await fetch(
         "http://localhost:5500/api/connections/request",
         {
           method: "POST",
           headers: {
-            "Content-Type": "application/json",
+            "Content-Type": "application/json"
           },
           body: JSON.stringify({
             sender_id: Number(user.id),
             receiver_id: Number(receiverId),
-            message: "I would like to connect with you.",
-          }),
+            message: "I would like to connect with you."
+          })
         }
       );
-  
+
       const data = await response.json();
-  
-      console.log("Connection Response:", data);
-  
+
       if (response.ok) {
-        setMessage(`Connection request sent to ${receiverName}`);
+        setMessage("Connection request sent to " + receiverName);
         fetchConnectionRequests();
       } else {
         setMessage(data.message || "Unable to send connection request");
       }
-  
     } catch (error) {
       console.error("Connection Error:", error);
       setMessage("Unable to connect to server");
     }
   };
 
-
-
-
-
   const handleProfessionalSelection = (professionalId) => {
-  setSelectedProfessionals((prev) => {
-    if (prev.includes(professionalId)) {
-      return prev.filter((id) => id !== professionalId);
-    }
+    setSelectedProfessionals((previous) => {
+      if (previous.includes(professionalId)) {
+        return previous.filter((id) => id !== professionalId);
+      }
 
-    return [...prev, professionalId];
-  });
-};
+      return [...previous, professionalId];
+    });
+  };
+
   const handleAcceptRequest = async (requestId) => {
     try {
       const response = await fetch(
         `http://localhost:5500/api/connections/${requestId}/accept`,
         {
-          method: "PUT",
+          method: "PUT"
         }
       );
-  
+
       const data = await response.json();
-  
+
       if (response.ok) {
         setMessage("Connection request accepted");
         fetchConnectionRequests();
+        fetchConnections();
       } else {
         setMessage(data.message || "Unable to accept request");
       }
@@ -171,18 +185,18 @@ const [messageText, setMessageText] = useState("");
       setMessage("Unable to connect to server");
     }
   };
-  
+
   const handleRejectRequest = async (requestId) => {
     try {
       const response = await fetch(
         `http://localhost:5500/api/connections/${requestId}/reject`,
         {
-          method: "PUT",
+          method: "PUT"
         }
       );
-  
+
       const data = await response.json();
-  
+
       if (response.ok) {
         setMessage("Connection request rejected");
         fetchConnectionRequests();
@@ -195,28 +209,51 @@ const [messageText, setMessageText] = useState("");
     }
   };
 
+  /* =========================================================
+     VIEW PROFILE
+     ========================================================= */
 
-  const handleViewProfile = (userId) => {
-    console.log("Viewing profile:", userId);
-  
-    // Next step me yahan profile page open karenge
+  const handleViewProfile = async (userId) => {
+    try {
+      const response = await fetch(
+        `http://localhost:5500/api/profile/${userId}`
+      );
+
+      const data = await response.json();
+
+      console.log("Professional Profile:", data);
+
+      if (response.ok) {
+        setSelectedProfile(data);
+      } else {
+        setMessage(data.message || "Unable to load professional profile");
+      }
+    } catch (error) {
+      console.error("View Profile Error:", error);
+      setMessage("Unable to connect to server");
+    }
   };
+
+  /* =========================================================
+     EVENTS
+     ========================================================= */
+
   const fetchEvents = async () => {
     if (!user?.id) {
       setMessage("Organizer login information not found");
       return;
     }
-  
+
     try {
       const response = await fetch(
         `http://localhost:5500/api/events/organizer/${user.id}`
       );
-  
+
       const data = await response.json();
-  
+
       if (response.ok) {
         setEvents(data);
-      
+
         data.forEach((event) => {
           fetchEventProfessionals(event.id);
         });
@@ -229,19 +266,14 @@ const [messageText, setMessageText] = useState("");
     }
   };
 
-
-
-  //fetch organizers
   const fetchOrganizers = async () => {
     try {
       const response = await fetch(
         "http://localhost:5500/api/organizers"
       );
-  
+
       const data = await response.json();
-  
-      console.log("Organizers:", data);
-  
+
       if (response.ok) {
         setOrganizers(data);
       } else {
@@ -253,17 +285,14 @@ const [messageText, setMessageText] = useState("");
     }
   };
 
-  //fetchprofessional
   const fetchProfessionals = async () => {
     try {
       const response = await fetch(
         "http://localhost:5500/api/professionals"
       );
-  
+
       const data = await response.json();
-  
-      console.log("Professionals:", data);
-  
+
       if (response.ok) {
         setProfessionals(data);
       } else {
@@ -274,9 +303,6 @@ const [messageText, setMessageText] = useState("");
       setMessage("Unable to connect to server");
     }
   };
-  //fetchconnection
-
-
 
 
 
@@ -287,15 +313,13 @@ const [messageText, setMessageText] = useState("");
       if (!user?.id) {
         return;
       }
-  
+
       const response = await fetch(
         `http://localhost:5500/api/connections/requests/${user.id}`
       );
-  
+
       const data = await response.json();
-  
-      console.log("Connection Requests:", data);
-  
+
       if (response.ok) {
         setConnectionRequests(data);
       } else {
@@ -308,218 +332,390 @@ const [messageText, setMessageText] = useState("");
       setMessage("Unable to connect to server");
     }
   };
-//fetch connection
 
+  const fetchConnections = async () => {
+    try {
+      if (!user?.id) {
+        return;
+      }
 
-const fetchConnections = async () => {
-  try {
+      const response = await fetch(
+        `http://localhost:5500/api/connections/${user.id}`
+      );
+
+      const data = await response.json();
+
+      if (response.ok) {
+        setConnections(data);
+      } else {
+        setMessage(data.message || "Unable to load connections");
+      }
+    } catch (error) {
+      console.error("Fetch Connections Error:", error);
+      setMessage("Unable to connect to server");
+    }
+  };
+
+  const fetchEventAttendance = async (eventId) => {
+    try {
+      const response = await fetch(
+        `http://localhost:5500/api/events/${eventId}/attendance`
+      );
+
+      const data = await response.json();
+
+      if (response.ok) {
+        setEventAttendance(data);
+        setSelectedAttendanceEvent(eventId);
+      } else {
+        setMessage(data.message || "Unable to load attendance");
+      }
+    } catch (error) {
+      console.error("Fetch Attendance Error:", error);
+      setMessage("Unable to connect to server");
+    }
+  };
+
+  const fetchEventProfessionals = async (eventId) => {
+    try {
+      const response = await fetch(
+        `http://localhost:5500/api/events/${eventId}/professionals`
+      );
+
+      const data = await response.json();
+
+      if (response.ok) {
+        setEventProfessionals((previous) => ({
+          ...previous,
+          [eventId]: data
+        }));
+      } else {
+        setMessage(
+          data.message || "Unable to load event professionals"
+        );
+      }
+    } catch (error) {
+      console.error("Fetch Event Professionals Error:", error);
+      setMessage("Unable to connect to server");
+    }
+  };
+
+  const updateAttendance = async (
+    eventId,
+    professionalId,
+    status
+  ) => {
+    try {
+      const response = await fetch(
+        `http://localhost:5500/api/events/${eventId}/attendance/${professionalId}`,
+        {
+          method: "PUT",
+          headers: {
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify({
+            status
+          })
+        }
+      );
+
+      const data = await response.json();
+
+      if (response.ok) {
+        setMessage("Attendance updated successfully");
+        fetchEventAttendance(eventId);
+      } else {
+        setMessage(data.message || "Unable to update attendance");
+      }
+    } catch (error) {
+      console.error("Update Attendance Error:", error);
+      setMessage("Unable to connect to server");
+    }
+  };
+
+  /* =========================================================
+     ORGANIZER PROFILE
+     ========================================================= */
+
+  const fetchOrganizerProfile = async () => {
     if (!user?.id) {
       return;
     }
 
-    const response = await fetch(
-      `http://localhost:5500/api/connections/${user.id}`
-    );
-
-    const data = await response.json();
-
-    console.log("My Connections:", data);
-
-    if (response.ok) {
-      setConnections(data);
-    } else {
-      setMessage(data.message || "Unable to load connections");
-    }
-  } catch (error) {
-    console.error("Fetch Connections Error:", error);
-    setMessage("Unable to connect to server");
-  }
-};
-
-const fetchEventAttendance = async (eventId) => {
-  try {
-    const response = await fetch(
-      `http://localhost:5500/api/events/${eventId}/attendance`
-    );
-
-    const data = await response.json();
-
-    if (response.ok) {
-      setEventAttendance(data);
-      setSelectedAttendanceEvent(eventId);
-    } else {
-      setMessage(data.message || "Unable to load attendance");
-    }
-  } catch (error) {
-    console.error("Fetch Attendance Error:", error);
-    setMessage("Unable to connect to server");
-  }
-};
-
-
-const fetchEventProfessionals = async (eventId) => {
-  try {
-    const response = await fetch(
-      `http://localhost:5500/api/events/${eventId}/professionals`
-    );
-
-    const data = await response.json();
-
-    if (response.ok) {
-      setEventProfessionals((previous) => ({
-        ...previous,
-        [eventId]: data
-      }));
-    } else {
-      setMessage(
-        data.message || "Unable to load event professionals"
+    try {
+      const response = await fetch(
+        `http://localhost:5500/api/profile/${user.id}`
       );
-    }
 
-  } catch (error) {
-    console.error(
-      "Fetch Event Professionals Error:",
-      error
-    );
+      const data = await response.json();
 
-    setMessage("Unable to connect to server");
-  }
-};
+      console.log("Organizer Profile:", data);
 
-const updateAttendance = async (eventId, professionalId, status) => {
-  try {
-    const response = await fetch(
-      `http://localhost:5500/api/events/${eventId}/attendance/${professionalId}`,
-      {
-        method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          status,
-        }),
+      if (response.ok) {
+        setOrganizerProfile(data);
+      } else {
+        setMessage(
+          data.message || "Unable to load organizer profile"
+        );
       }
-    );
-
-    const data = await response.json();
-
-    if (response.ok) {
-      setMessage("Attendance updated successfully");
-      fetchEventAttendance(eventId);
-    } else {
-      setMessage(data.message || "Unable to update attendance");
+    } catch (error) {
+      console.error("Fetch Organizer Profile Error:", error);
+      setMessage("Unable to connect to server");
     }
-  } catch (error) {
-    console.error("Update Attendance Error:", error);
-    setMessage("Unable to connect to server");
-  }
-};
-
-
+  };
 
   useEffect(() => {
-    fetchEvents(); 
+    fetchEvents();
     fetchOrganizers();
     fetchProfessionals();
     fetchConnectionRequests();
     fetchConnections();
+    fetchOrganizerProfile();
   }, []);
-  
+
+  /* =========================================================
+     CHAT - LOAD MESSAGES
+     ========================================================= */
+
+  useEffect(() => {
+    if (!selectedChat || !user?.id) {
+      setMessages([]);
+      return;
+    }
+
+    const loadMessages = async () => {
+      try {
+        if (selectedConversationId) {
+          const response = await fetch(
+            `http://localhost:5500/api/conversations/${selectedConversationId}/messages?userId=${user.id}`
+          );
+
+          const data = await response.json();
+
+          if (!response.ok) {
+            throw new Error(
+              data.message || "Unable to load conversation"
+            );
+          }
+
+          setMessages(data);
+          return;
+        }
+
+        if (!selectedChatEvent) {
+          setMessages([]);
+          return;
+        }
+
+        const response = await fetch(
+          `http://localhost:5500/api/messages/${selectedChatEvent.id}/${user.id}/${selectedChat.id}`
+        );
+
+        const data = await response.json();
+
+        if (!response.ok) {
+          throw new Error(
+            data.message || "Unable to load messages"
+          );
+        }
+
+        setMessages(data);
+
+        await fetch(
+          `http://localhost:5500/api/messages/read/${selectedChatEvent.id}/${user.id}/${selectedChat.id}`,
+          {
+            method: "PUT"
+          }
+        );
+      } catch (error) {
+        console.error("Load Messages Error:", error);
+        setMessages([]);
+      }
+    };
+
+    loadMessages();
+  }, [
+    selectedChat,
+    selectedChatEvent,
+    selectedConversationId,
+    user?.id
+  ]);
+
+  /* =========================================================
+     CHAT - SEND MESSAGE
+     ========================================================= */
+
+  const handleSendMessage = async (e) => {
+    e.preventDefault();
+
+    if (!messageText.trim()) {
+      return;
+    }
+
+    if (!selectedChat || !user?.id) {
+      return;
+    }
+
+    try {
+      if (selectedConversationId) {
+        const response = await fetch(
+          `http://localhost:5500/api/conversations/${selectedConversationId}/messages`,
+          {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json"
+            },
+            body: JSON.stringify({
+              sender_id: user.id,
+              message: messageText.trim()
+            })
+          }
+        );
+
+        const data = await response.json();
+
+        if (!response.ok) {
+          throw new Error(
+            data.message || "Unable to send message"
+          );
+        }
+
+        setMessages((previousMessages) => [
+          ...previousMessages,
+          data.data
+        ]);
+
+        setMessageText("");
+        return;
+      }
+
+      if (!selectedChatEvent) {
+        return;
+      }
+
+      const response = await fetch(
+        "http://localhost:5500/api/messages",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify({
+            event_id: selectedChatEvent.id,
+            sender_id: user.id,
+            receiver_id: selectedChat.id,
+            message: messageText.trim()
+          })
+        }
+      );
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(
+          data.message || "Unable to send message"
+        );
+      }
+
+      setMessages((previousMessages) => [
+        ...previousMessages,
+        data.data
+      ]);
+
+      setMessageText("");
+    } catch (error) {
+      console.error("Send Message Error:", error);
+      alert(error.message);
+    }
+  };
+
+  /* =========================================================
+     CREATE EVENT
+     ========================================================= */
+
   const handleChange = (e) => {
     const { name, value } = e.target;
-  
+
     setFormData((previous) => ({
       ...previous,
       [name]: value
     }));
   };
-  
-   const handleSubmit = async (e) => {
+
+  const handleSubmit = async (e) => {
     e.preventDefault();
-  
+
     try {
-      // Gconstet organizer login information
       if (!user?.id) {
         setMessage("Organizer login information not found.");
         return;
       }
-  
-      // Check browser GPS support
+
       if (!navigator.geolocation) {
         setMessage(
           "Geolocation is not supported by your browser."
         );
         return;
       }
-  
+
       setMessage("Getting event location...");
-  
-      // Get organizer's current location
+
       navigator.geolocation.getCurrentPosition(
         async (position) => {
           try {
             const latitude = position.coords.latitude;
             const longitude = position.coords.longitude;
-  
-            console.log("Event Latitude:", latitude);
-            console.log("Event Longitude:", longitude);
-  
+
             const response = await fetch(
               "http://localhost:5500/api/events",
               {
                 method: "POST",
-  
                 headers: {
-                  "Content-Type": "application/json",
+                  "Content-Type": "application/json"
                 },
-  
                 body: JSON.stringify({
                   organizer_id: user.id,
-  
                   title: formData.title,
                   description: formData.description,
                   location: formData.location,
-  
-                  // GPS location of event
-                  latitude: latitude,
-                  longitude: longitude,
-  
+                  latitude,
+                  longitude,
                   event_date: formData.event_date,
                   start_time: formData.start_time,
-                  end_time: formData.end_time,
-                }),
+                  end_time: formData.end_time
+                })
               }
             );
-  
+
             const data = await response.json();
-  
+
             if (response.ok) {
-              console.log("Event created successfully:", data);
-            
+                            console.log("Event created successfully:", data);
+
               // Get newly created event ID
               const eventId =
                 data.event?.id ||
                 data.event?.event_id ||
                 data.id ||
                 data.event_id;
-            
+
               if (!eventId) {
                 console.error("Event ID not found in response:", data);
-            
+
                 setMessage(
                   "Event created, but event ID was not received."
                 );
-            
+
                 fetchEvents();
                 return;
               }
-            
+
               console.log("Created Event ID:", eventId);
-            
+
               // ==========================================
               // SEND EVENT REQUEST TO SELECTED PROFESSIONALS
               // ==========================================
-            
+
               if (
                 selectedProfessionals &&
                 selectedProfessionals.length > 0
@@ -528,7 +724,7 @@ const updateAttendance = async (eventId, professionalId, status) => {
                   "Sending requests to:",
                   selectedProfessionals
                 );
-            
+
                 const requestResults = await Promise.all(
                   selectedProfessionals.map(async (professionalId) => {
                     try {
@@ -547,15 +743,15 @@ const updateAttendance = async (eventId, professionalId, status) => {
                           }),
                         }
                       );
-            
+
                       const requestData =
                         await requestResponse.json();
-            
+
                       console.log(
                         `Request result for professional ${professionalId}:`,
                         requestData
                       );
-            
+
                       return {
                         professionalId,
                         success: requestResponse.ok,
@@ -566,7 +762,7 @@ const updateAttendance = async (eventId, professionalId, status) => {
                         `Failed to send request to professional ${professionalId}:`,
                         error
                       );
-            
+
                       return {
                         professionalId,
                         success: false,
@@ -574,17 +770,17 @@ const updateAttendance = async (eventId, professionalId, status) => {
                     }
                   })
                 );
-            
+
                 console.log(
                   "All event request results:",
                   requestResults
                 );
-            
+
                 const failedRequests =
                   requestResults.filter(
                     (result) => !result.success
                   );
-            
+
                 if (failedRequests.length === 0) {
                   setMessage(
                     "Event created successfully. Requests sent to all selected professionals."
@@ -603,8 +799,21 @@ const updateAttendance = async (eventId, professionalId, status) => {
                   "Event created successfully. No professionals were selected."
                 );
               }
-            
+
+              // Reset form after successful event creation
+              setFormData({
+                title: "",
+                description: "",
+                location: "",
+                latitude: "",
+                longitude: "",
+                event_date: "",
+                start_time: "",
+                end_time: ""
+              });
+
               // Refresh organizer events
+              fetchEvents();
               fetchEvents();
             
               // Clear selected professionals
@@ -615,25 +824,14 @@ const updateAttendance = async (eventId, professionalId, status) => {
               );
             
             }
-  
           } catch (error) {
-            console.error(
-              "Create Event Error:",
-              error
-            );
-  
-            setMessage(
-              "Unable to create event."
-            );
+            console.error("Create Event Error:", error);
+            setMessage("Unable to create event.");
           }
         },
-  
         (error) => {
-          console.error(
-            "Event Location Error:",
-            error
-          );
-  
+          console.error("Event Location Error:", error);
+
           if (error.code === 1) {
             setMessage(
               "Location permission denied. Please allow location access."
@@ -643,29 +841,20 @@ const updateAttendance = async (eventId, professionalId, status) => {
               "Unable to determine your location."
             );
           } else if (error.code === 3) {
-            setMessage(
-              "Location request timed out."
-            );
+            setMessage("Location request timed out.");
           } else {
-            setMessage(
-              "Unable to get event location."
-            );
+            setMessage("Unable to get event location.");
           }
         },
-  
         {
           enableHighAccuracy: true,
           timeout: 15000,
-          maximumAge: 0,
+          maximumAge: 0
         }
       );
-  
     } catch (error) {
       console.error(error);
-  
-      setMessage(
-        "Something went wrong."
-      );
+      setMessage("Something went wrong.");
     }
   };
   
@@ -734,32 +923,116 @@ const updateAttendance = async (eventId, professionalId, status) => {
     }
   };
 
+  /* =========================================================
+     PROFILE EDIT
+     ========================================================= */
+
+  const startEditingProfile = () => {
+    const profile = organizerProfile?.profile || {};
+
+    setProfileForm({
+      organization_name: profile.organization_name || "",
+      phone: profile.phone || "",
+      city: profile.city || "",
+      address: profile.address || "",
+      description: profile.description || "",
+      profile_photo: profile.profile_photo || ""
+    });
+
+    setIsEditingProfile(true);
+    setMessage("");
+  };
+
+  const handleProfileChange = (e) => {
+    const { name, value } = e.target;
+
+    setProfileForm((previous) => ({
+      ...previous,
+      [name]: value
+    }));
+  };
+
+  const handleProfileSave = async (e) => {
+    e.preventDefault();
+
+    if (!user?.id) {
+      setMessage("Organizer login information not found.");
+      return;
+    }
+
+    try {
+      setProfileSaving(true);
+      setMessage("Saving profile...");
+
+      const response = await fetch(
+        "http://localhost:5500/api/profile/organizer",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify({
+            user_id: Number(user.id),
+            organization_name: profileForm.organization_name,
+            phone: profileForm.phone,
+            city: profileForm.city,
+            address: profileForm.address,
+            description: profileForm.description,
+            profile_photo: profileForm.profile_photo
+          })
+        }
+      );
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        setMessage(
+          data.message || "Unable to save organizer profile"
+        );
+        return;
+      }
+
+      setMessage("Profile saved successfully");
+      setIsEditingProfile(false);
+
+      await fetchOrganizerProfile();
+    } catch (error) {
+      console.error("Save Organizer Profile Error:", error);
+      setMessage("Unable to connect to server");
+    } finally {
+      setProfileSaving(false);
+    }
+  };
+
+  /* =========================================================
+     EVENT STATUS
+     ========================================================= */
+
   const getEventStatus = (event) => {
     const now = new Date();
-  
+
     const start = new Date(
       `${event.event_date}T${event.start_time || "00:00"}`
     );
-  
+
     const end = new Date(
       `${event.event_date}T${event.end_time || "23:59"}`
     );
-  
+
     if (now < start) {
       return "Upcoming";
     }
-  
+
     if (now >= start && now <= end) {
       return "Ongoing";
     }
-  
+
     return "Completed";
   };
 
-
   const markAllRead = () => {
-    setNotifications(
-      notifications.map((notification) => ({
+    setNotifications((previous) =>
+      previous.map((notification) => ({
         ...notification,
         unread: false
       }))
@@ -777,14 +1050,10 @@ const updateAttendance = async (eventId, professionalId, status) => {
 
       <aside className="crew-sidebar">
 
-        {/* Logo */}
-
         <div className="crew-logo">
           <div className="crew-logo-icon">C</div>
           <span>CrewAura</span>
         </div>
-
-        {/* Navigation */}
 
         <nav className="crew-nav">
 
@@ -828,9 +1097,7 @@ const updateAttendance = async (eventId, professionalId, status) => {
             <span className="nav-label">My Events</span>
           </button>
 
-          <div className="crew-menu-title">
-            Connections
-          </div>
+          <div className="crew-menu-title">Connections</div>
 
           <button
             className={`crew-nav-item ${
@@ -871,9 +1138,7 @@ const updateAttendance = async (eventId, professionalId, status) => {
             onClick={() => showSection("connections")}
           >
             <span className="nav-icon">♧</span>
-            <span className="nav-label">
-              My Connections
-            </span>
+            <span className="nav-label">My Connections</span>
           </button>
 
           <div className="crew-menu-title">
@@ -922,29 +1187,36 @@ const updateAttendance = async (eventId, professionalId, status) => {
 
         </nav>
 
-        
-{/* Organizer */}
+        {/* Organizer profile at bottom */}
 
-<div className="crew-sidebar-profile">
-  <div className="crew-profile-avatar">
-    {user?.name
-      ? user.name
-          .split(" ")
-          .map((word) => word[0])
-          .join("")
-          .toUpperCase()
-      : "OR"}
-  </div>
+        <div className="crew-profile">
 
-  <div className="crew-profile-text">
-    <strong>{user?.name || "Organizer"}</strong>
-    <span>Event Organizer</span>
-  </div>
-</div>
+          <button
+            type="button"
+            className="crew-profile-avatar profile-avatar-button"
+            onClick={() => showSection("profile")}
+          >
+            {user?.name
+              ? user.name
+                  .split(" ")
+                  .map((word) => word[0])
+                  .join("")
+                  .toUpperCase()
+              : "OR"}
+          </button>
 
-</aside>
+          <button
+            type="button"
+            className="crew-profile-text profile-text-button"
+            onClick={() => showSection("profile")}
+          >
+            <strong>{user?.name || "Organizer"}</strong>
+            <span>Event Organizer</span>
+          </button>
 
+        </div>
 
+      </aside>
 
       {/* ================= MAIN AREA ================= */}
 
@@ -955,10 +1227,13 @@ const updateAttendance = async (eventId, professionalId, status) => {
         <header className="crew-topbar">
 
           <div className="crew-page-heading">
+
             <h1>{titles[activeSection]}</h1>
+
             <p>
               Manage your events, connections and workforce
             </p>
+
           </div>
 
           <div className="crew-notification-wrapper">
@@ -969,26 +1244,27 @@ const updateAttendance = async (eventId, professionalId, status) => {
                 setNotificationsOpen(!notificationsOpen)
               }
             >
-              <span className="notification-icon">
-                ♧
-              </span>
+              <span className="notification-icon">♧</span>
 
               {unreadCount > 0 && (
                 <span className="notification-count">
                   {unreadCount}
                 </span>
               )}
+
             </button>
 
             {notificationsOpen && (
               <div className="crew-notification-panel">
 
                 <div className="notification-panel-header">
+
                   <strong>Notifications</strong>
 
                   <button onClick={markAllRead}>
                     Mark all as read
                   </button>
+
                 </div>
 
                 {notifications.map((notification) => (
@@ -998,17 +1274,17 @@ const updateAttendance = async (eventId, professionalId, status) => {
                       notification.unread ? "unread" : ""
                     }`}
                   >
+
                     <div className="notification-item-dot"></div>
 
                     <div>
-                      <strong>
-                        {notification.title}
-                      </strong>
 
-                      <p>
-                        {notification.text}
-                      </p>
+                      <strong>{notification.title}</strong>
+
+                      <p>{notification.text}</p>
+
                     </div>
+
                   </div>
                 ))}
 
@@ -1023,6 +1299,12 @@ const updateAttendance = async (eventId, professionalId, status) => {
 
         <div className="crew-content">
 
+          {message && (
+            <div className="crew-message">
+              {message}
+            </div>
+          )}
+
           {/* ================= DASHBOARD ================= */}
 
           {activeSection === "dashboard" && (
@@ -1031,43 +1313,38 @@ const updateAttendance = async (eventId, professionalId, status) => {
               <div className="crew-stats-grid">
 
                 <div className="crew-stat-card">
-                  <div className="crew-stat-icon">
-                    ▤
-                  </div>
-
+                  <div className="crew-stat-icon">▤</div>
                   <div>
                     <span>Total Events</span>
-                    <strong>24</strong>
+                    <strong>{events.length}</strong>
                   </div>
                 </div>
 
                 <div className="crew-stat-card">
-                  <div className="crew-stat-icon">
-                    ♧
-                  </div>
-
+                  <div className="crew-stat-icon">♧</div>
                   <div>
                     <span>Connected People</span>
-                    <strong>0</strong>
+                    <strong>{connections.length}</strong>
                   </div>
                 </div>
 
                 <div className="crew-stat-card">
-                  <div className="crew-stat-icon">
-                    ◉
-                  </div>
-
+                  <div className="crew-stat-icon">◉</div>
                   <div>
                     <span>Active Events</span>
-                    <strong>5</strong>
+                    <strong>
+                      {
+                        events.filter(
+                          (event) =>
+                            getEventStatus(event) === "Ongoing"
+                        ).length
+                      }
+                    </strong>
                   </div>
                 </div>
 
                 <div className="crew-stat-card">
-                  <div className="crew-stat-icon">
-                    ₹
-                  </div>
-
+                  <div className="crew-stat-icon">₹</div>
                   <div>
                     <span>Total Budget</span>
                     <strong>₹8.4L</strong>
@@ -1077,16 +1354,16 @@ const updateAttendance = async (eventId, professionalId, status) => {
               </div>
 
               <div className="crew-section-heading">
+
                 <h2>Upcoming Events</h2>
 
                 <button
                   className="crew-primary-button"
-                  onClick={() =>
-                    showSection("createEvent")
-                  }
+                  onClick={() => showSection("createEvent")}
                 >
                   + Create Event
                 </button>
+
               </div>
 
               <div className="crew-event-grid">
@@ -1107,9 +1384,7 @@ const updateAttendance = async (eventId, professionalId, status) => {
 
                   <button
                     className="crew-outline-button"
-                    onClick={() =>
-                      showSection("events")
-                    }
+                    onClick={() => showSection("events")}
                   >
                     View Event
                   </button>
@@ -1132,9 +1407,7 @@ const updateAttendance = async (eventId, professionalId, status) => {
 
                   <button
                     className="crew-outline-button"
-                    onClick={() =>
-                      showSection("events")
-                    }
+                    onClick={() => showSection("events")}
                   >
                     View Event
                   </button>
@@ -1157,9 +1430,7 @@ const updateAttendance = async (eventId, professionalId, status) => {
 
                   <button
                     className="crew-outline-button"
-                    onClick={() =>
-                      showSection("events")
-                    }
+                    onClick={() => showSection("events")}
                   >
                     View Event
                   </button>
@@ -1172,103 +1443,369 @@ const updateAttendance = async (eventId, professionalId, status) => {
           )}
 
           {/* ================= PROFILE ================= */}
+
           {activeSection === "profile" && (
-  <section className="crew-section">
+            <section className="crew-section organizer-profile-page">
 
-    <div className="crew-profile-layout">
+              <div className="organizer-profile-header">
 
-      <div className="crew-profile-card">
+                <div>
 
-        <div className="crew-large-avatar">
-          {user?.name
-            ? user.name
-                .split(" ")
-                .map((word) => word[0])
-                .join("")
-                .toUpperCase()
-            : "OR"}
-        </div>
+                  <span className="profile-page-label">
+                    ORGANIZER ACCOUNT
+                  </span>
 
-        <h2>{user?.name || "Organizer"}</h2>
+                  <h2>My Profile</h2>
 
-        <p>
-          Professional Event Organizer
-        </p>
-
-        <span className="crew-verified">
-          ✓ Aadhaar Verified
-        </span>
-
-      </div>
-
-      <div className="crew-profile-information">
-
-        <div className="crew-info-row">
-          <span>Phone</span>
-          <strong>+91 XXXXX XXXXX</strong>
-        </div>
-
-        <div className="crew-info-row">
-          <span>Email</span>
-          <strong>
-            {user?.email || "organizer@example.com"}
-          </strong>
-        </div>
-
-        <div className="crew-info-row">
-          <span>Aadhaar</span>
-          <strong>
-            XXXX XXXX 1234
-          </strong>
-        </div>
-
-        <div className="crew-info-row">
-          <span>Address</span>
-          <strong>
-            Bhopal, Madhya Pradesh
-          </strong>
-        </div>
-
-        <div className="crew-info-row">
-          <span>Organization</span>
-          <strong>
-            CrewAura Events
-          </strong>
-        </div>
-
-      </div>
-
-    </div>
-
-  
-
-              <div className="crew-form-card">
-
-                <h2>Organization Information</h2>
-
-                <div className="crew-form-grid">
-
-                  <div className="crew-form-group">
-                    <label>Organization Name</label>
-                    <input
-                      type="text"
-                      value="CrewAura Events"
-                      readOnly
-                    />
-                  </div>
-
-                  <div className="crew-form-group">
-                    <label>Organization Type</label>
-                    <input
-                      type="text"
-                      value="Event Management"
-                      readOnly
-                    />
-                  </div>
+                  <p>
+                    Manage your organizer information and
+                    profile details.
+                  </p>
 
                 </div>
 
+                {!isEditingProfile && (
+                  <button
+                    type="button"
+                    className="crew-primary-button"
+                    onClick={startEditingProfile}
+                  >
+                    ✎ Edit Profile
+                  </button>
+                )}
+
               </div>
+
+              {isEditingProfile ? (
+                <form
+                  className="organizer-profile-edit-card"
+                  onSubmit={handleProfileSave}
+                >
+
+                  <div className="profile-edit-heading">
+                    <span>EDIT PROFILE</span>
+                    <h2>Update Organizer Information</h2>
+                  </div>
+
+                  <div className="crew-form-grid">
+
+                    <div className="crew-form-group">
+                      <label>Organization Name</label>
+
+                      <input
+                        type="text"
+                        name="organization_name"
+                        value={profileForm.organization_name}
+                        onChange={handleProfileChange}
+                        placeholder="Enter organization name"
+                      />
+                    </div>
+
+                    <div className="crew-form-group">
+                      <label>Phone</label>
+
+                      <input
+                        type="text"
+                        name="phone"
+                        value={profileForm.phone}
+                        onChange={handleProfileChange}
+                        placeholder="Enter phone number"
+                      />
+                    </div>
+
+                    <div className="crew-form-group">
+                      <label>City</label>
+
+                      <input
+                        type="text"
+                        name="city"
+                        value={profileForm.city}
+                        onChange={handleProfileChange}
+                        placeholder="Enter city"
+                      />
+                    </div>
+
+                    <div className="crew-form-group crew-full-width">
+                      <label>Address</label>
+
+                      <textarea
+                        name="address"
+                        value={profileForm.address}
+                        onChange={handleProfileChange}
+                        placeholder="Enter organization address"
+                        rows="3"
+                      />
+                    </div>
+
+                    <div className="crew-form-group crew-full-width">
+                      <label>Description</label>
+
+                      <textarea
+                        name="description"
+                        value={profileForm.description}
+                        onChange={handleProfileChange}
+                        placeholder="Tell us about your organization"
+                        rows="4"
+                      />
+                    </div>
+
+                    <div className="crew-form-group crew-full-width">
+                      <label>Profile Photo URL</label>
+
+                      <input
+                        type="text"
+                        name="profile_photo"
+                        value={profileForm.profile_photo}
+                        onChange={handleProfileChange}
+                        placeholder="Paste profile photo URL"
+                      />
+
+                      <small>
+                        Paste a direct image URL for your
+                        profile photo.
+                      </small>
+                    </div>
+
+                    {profileForm.profile_photo && (
+                      <div className="crew-form-group crew-full-width">
+
+                        <label>Photo Preview</label>
+
+                        <div className="crew-profile-photo-preview">
+
+                          <img
+                            src={profileForm.profile_photo}
+                            alt="Profile Preview"
+                            className="crew-large-profile-photo"
+                            onError={(e) => {
+                              e.currentTarget.style.display =
+                                "none";
+                            }}
+                          />
+
+                        </div>
+
+                      </div>
+                    )}
+
+                  </div>
+
+                  <div className="organizer-profile-actions">
+
+                    <button
+                      type="button"
+                      className="crew-secondary-button"
+                      onClick={() =>
+                        setIsEditingProfile(false)
+                      }
+                      disabled={profileSaving}
+                    >
+                      Cancel
+                    </button>
+
+                    <button
+                      type="submit"
+                      className="crew-primary-button"
+                      disabled={profileSaving}
+                    >
+                      {profileSaving
+                        ? "Saving..."
+                        : "Save Changes"}
+                    </button>
+
+                  </div>
+
+                </form>
+              ) : (
+                <div className="organizer-profile-view">
+
+                  <div className="organizer-profile-main-card">
+
+                    <div className="organizer-profile-photo-wrapper">
+
+                      {organizerProfile?.profile
+                        ?.profile_photo ? (
+                        <img
+                          src={
+                            organizerProfile.profile
+                              .profile_photo
+                          }
+                          alt="Organizer Profile"
+                          className="organizer-profile-main-photo"
+                          onError={(e) => {
+                            e.currentTarget.style.display =
+                              "none";
+                          }}
+                        />
+                      ) : (
+                        <div className="organizer-profile-main-avatar">
+                          {organizerProfile?.user?.name
+                            ? organizerProfile.user.name
+                                .split(" ")
+                                .map((word) => word[0])
+                                .join("")
+                                .toUpperCase()
+                            : user?.name
+                              ? user.name
+                                  .split(" ")
+                                  .map((word) => word[0])
+                                  .join("")
+                                  .toUpperCase()
+                              : "OR"}
+                        </div>
+                      )}
+
+                    </div>
+
+                    <div className="organizer-profile-main-info">
+
+                      <span className="profile-role-badge">
+                        ✓ Verified Organizer
+                      </span>
+
+                      <h1>
+                        {organizerProfile?.user?.name ||
+                          user?.name ||
+                          "Organizer"}
+                      </h1>
+
+                      <h3>
+                        {organizerProfile?.profile
+                          ?.organization_name ||
+                          "Event Organization"}
+                      </h3>
+
+                      <p>
+                        {organizerProfile?.profile?.city
+                          ? `📍 ${organizerProfile.profile.city}`
+                          : "📍 Location not added"}
+                      </p>
+
+                    </div>
+
+                  </div>
+
+                  <div className="organizer-profile-details-grid">
+
+                    <div className="organizer-detail-card">
+
+                      <div className="organizer-detail-icon">
+                        📞
+                      </div>
+
+                      <div>
+                        <span>Phone Number</span>
+
+                        <strong>
+                          {organizerProfile?.profile?.phone ||
+                            "Not added"}
+                        </strong>
+                      </div>
+
+                    </div>
+
+                    <div className="organizer-detail-card">
+
+                      <div className="organizer-detail-icon">
+                        ✉
+                      </div>
+
+                      <div>
+                        <span>Email Address</span>
+
+                        <strong>
+                          {organizerProfile?.user?.email ||
+                            user?.email ||
+                            "Not added"}
+                        </strong>
+                      </div>
+
+                    </div>
+
+                    <div className="organizer-detail-card">
+
+                      <div className="organizer-detail-icon">
+                        🏢
+                      </div>
+
+                      <div>
+                        <span>Organization</span>
+
+                        <strong>
+                          {organizerProfile?.profile
+                            ?.organization_name ||
+                            "Not added"}
+                        </strong>
+                      </div>
+
+                    </div>
+
+                    <div className="organizer-detail-card">
+
+                      <div className="organizer-detail-icon">
+                        📍
+                      </div>
+
+                      <div>
+                        <span>City</span>
+
+                        <strong>
+                          {organizerProfile?.profile?.city ||
+                            "Not added"}
+                        </strong>
+                      </div>
+
+                    </div>
+
+                  </div>
+
+                  <div className="organizer-profile-info-card">
+
+                    <div className="organizer-info-card-heading">
+
+                      <span className="organizer-info-icon">
+                        🏠
+                      </span>
+
+                      <div>
+                        <span>Organization Address</span>
+                        <h3>Address</h3>
+                      </div>
+
+                    </div>
+
+                    <p>
+                      {organizerProfile?.profile?.address ||
+                        "No address has been added yet."}
+                    </p>
+
+                  </div>
+
+                  <div className="organizer-profile-info-card">
+
+                    <div className="organizer-info-card-heading">
+
+                      <span className="organizer-info-icon">
+                        ℹ
+                      </span>
+
+                      <div>
+                        <span>About Organization</span>
+                        <h3>About Us</h3>
+                      </div>
+
+                    </div>
+
+                    <p>
+                      {organizerProfile?.profile
+                        ?.description ||
+                        "No organization description has been added yet."}
+                    </p>
+
+                  </div>
+
+                </div>
+              )}
 
             </section>
           )}
@@ -1281,707 +1818,431 @@ const updateAttendance = async (eventId, professionalId, status) => {
               <div className="crew-form-card">
 
                 <h2>Create New Event</h2>
+
                 <form onSubmit={handleSubmit}>
 
-                <div className="crew-form-grid">
+                  <div className="crew-form-grid">
 
-                  <div className="crew-form-group">
-                    <label>Event Title</label>
-                    <input
+                    <div className="crew-form-group">
+                      <label>Event Title</label>
+
+                      <input
                         type="text"
                         name="title"
                         value={formData.title}
                         onChange={handleChange}
-                      placeholder="Enter event title"
-                     />
+                        placeholder="Enter event title"
+                        required
+                      />
+                    </div>
+
+                    <div className="crew-form-group">
+                      <label>Event Type</label>
+
+                      <select defaultValue="">
+                        <option value="">
+                          Select Event Type
+                        </option>
+                        <option>Conference</option>
+                        <option>Exhibition</option>
+                        <option>Wedding</option>
+                        <option>Corporate Event</option>
+                        <option>Concert</option>
+                        <option>Sports Tournament</option>
+                        <option>Cultural Festival</option>
+                      </select>
+                    </div>
+
+                    <div className="crew-form-group">
+                      <label>Start Date</label>
+
+                      <input
+                        type="date"
+                        name="event_date"
+                        value={formData.event_date}
+                        onChange={handleChange}
+                        required
+                      />
+                    </div>
+
+                    <div className="crew-form-group">
+                      <label>Start Time</label>
+
+                      <input
+                        type="time"
+                        name="start_time"
+                        value={formData.start_time}
+                        onChange={handleChange}
+                      />
+                    </div>
+
+                    <div className="crew-form-group">
+                      <label>End Time</label>
+
+                      <input
+                        type="time"
+                        name="end_time"
+                        value={formData.end_time}
+                        onChange={handleChange}
+                      />
+                    </div>
+
+                    <div className="crew-form-group">
+                      <label>Location</label>
+
+                      <input
+                        type="text"
+                        name="location"
+                        value={formData.location}
+                        onChange={handleChange}
+                        placeholder="Enter event location"
+                        required
+                      />
+                    </div>
+
                   </div>
 
-                  <div className="crew-form-group">
-                    <label>Event Type</label>
+                  <div className="crew-form-group crew-full-width">
 
-                    <select>
-                      <option>Select Event Type</option>
-                      <option>Conference</option>
-                      <option>Exhibition</option>
-                      <option>Wedding</option>
-                      <option>Corporate Event</option>
-                      <option>Concert</option>
-                      <option>Sports Tournament</option>
-                      <option>Cultural Festival</option>
-                    </select>
-                  </div>
+                    <label>Event Description</label>
 
-                  <div className="crew-form-group">
-                    <label>Start Date</label>
-
-                    <input
-  type="date"
-  name="event_date"
-  value={formData.event_date}
-  onChange={handleChange}
-/>
-                  </div>
-
-                  <div className="crew-form-group">
-                    <label>Location</label>
-
-                    <input
-  type="text"
-  name="location"
-  value={formData.location}
-  onChange={handleChange}
-  placeholder="Enter event location"
-/>
-                  </div>
-
-                  <div className="crew-form-group">
-                    <label>Expected Guests</label>
-
-                    <input
-                      type="number"
-                      placeholder="Number of guests"
+                    <textarea
+                      name="description"
+                      value={formData.description}
+                      onChange={handleChange}
+                      placeholder="Describe your event..."
+                      rows="6"
                     />
+
                   </div>
 
-                  <div className="crew-form-group">
-                    <label>Budget</label>
+                  <div className="crew-form-group crew-full-width">
 
-                    <input
-                      type="text"
-                      placeholder="₹ Enter budget"
-                    />
+                    <label>
+                      Select Team for This Event
+                    </label>
+
+                    {professionals.length === 0 ? (
+                      <div className="crew-empty-state">
+
+                        <h3>No professionals found</h3>
+
+                        <p>
+                          Registered professionals will
+                          appear here.
+                        </p>
+
+                      </div>
+                    ) : (
+                      <div className="crew-people-grid">
+
+                        {professionals.map(
+                          (professional) => {
+                            const isSelected =
+                              selectedProfessionals.includes(
+                                professional.id
+                              );
+
+                            return (
+                              <div
+                                className="crew-person-card"
+                                key={professional.id}
+                              >
+
+                                <div className="crew-person-avatar">
+
+                                  {professional.name
+                                    ? professional.name
+                                        .split(" ")
+                                        .map(
+                                          (word) =>
+                                            word[0]
+                                        )
+                                        .join("")
+                                        .toUpperCase()
+                                    : "PR"}
+
+                                </div>
+
+                                <h3>
+                                  {professional.name}
+                                </h3>
+
+                                <p>
+                                  Event Professional
+                                </p>
+
+                                <span>
+                                  📧{" "}
+                                  {professional.email}
+                                </span>
+
+                                <button
+                                  type="button"
+                                  className={
+                                    isSelected
+                                      ? "crew-team-button selected"
+                                      : "crew-team-button"
+                                  }
+                                  onClick={() =>
+                                    handleProfessionalSelection(
+                                      professional.id
+                                    )
+                                  }
+                                >
+                                  {isSelected
+                                    ? "✓ Selected"
+                                    : "+ Select Team"}
+                                </button>
+
+                              </div>
+                            );
+                          }
+                        )}
+
+                      </div>
+                    )}
+
                   </div>
 
-                </div>
+                  <button
+                    type="submit"
+                    className="crew-primary-button"
+                  >
+                    Create Event
+                  </button>
 
-                <div className="crew-form-group crew-full-width">
-
-                  <label>Event Description</label>
-
-                 <textarea
-              name="description"
-              value={formData.description}
-              onChange={handleChange}
-              placeholder="Describe your event..."
-               rows="6"
-              ></textarea>
-
-                </div>
-                <div className="crew-form-group crew-full-width">
-  <label>Select Team for This Event</label>
-
-  {professionals.length === 0 ? (
-    <div className="crew-empty-state">
-      <h3>No professionals found</h3>
-      <p>Registered professionals will appear here.</p>
-    </div>
-  ) : (
-    <div className="crew-people-grid">
-      {professionals.map((professional) => {
-        const isSelected = selectedProfessionals.includes(
-          professional.id
-        );
-
-        return (
-          <div
-            className="crew-person-card"
-            key={professional.id}
-          >
-            <div className="crew-person-avatar">
-              {professional.name
-                ? professional.name
-                    .split(" ")
-                    .map((word) => word[0])
-                    .join("")
-                    .toUpperCase()
-                : "PR"}
-            </div>
-
-            <h3>{professional.name}</h3>
-
-            <p>Event Professional</p>
-
-            <span>📧 {professional.email}</span>
-
-            <button
-              type="button"
-              className={
-                isSelected
-                  ? "crew-team-button selected"
-                  : "crew-team-button"
-              }
-              onClick={() =>
-                handleProfessionalSelection(professional.id)
-              }
-            >
-              {isSelected ? "✓ Selected" : "+ Select Team"}
-            </button>
-          </div>
-        );
-      })}
-    </div>
-  )}
-</div>
-                <button className="crew-primary-button">
-                  Create Event
-                </button>
                 </form>
+
               </div>
 
             </section>
           )}
 
-{/* ================= MY EVENTS ================= */}
-{activeSection === "events" && (
-  <section className="crew-section">
+          {/* ================= MY EVENTS ================= */}
 
-    <div className="crew-section-heading">
-      <h2>My Events</h2>
+          {activeSection === "events" && (
+            <section className="crew-section">
 
-      <button
-        className="crew-primary-button"
-        onClick={() => showSection("createEvent")}
-      >
-        + Create Event
-      </button>
-    </div>
+              <div className="crew-section-heading">
 
-    {events.length === 0 ? (
-      <div className="crew-empty-state">
-        <div className="empty-icon">▤</div>
+                <h2>My Events</h2>
 
-        <h3>No events found</h3>
+                <button
+                  className="crew-primary-button"
+                  onClick={() =>
+                    showSection("createEvent")
+                  }
+                >
+                  + Create Event
+                </button>
 
-        <p>
-          Events created by you will appear here.
-        </p>
-      </div>
-    ) : (
-      <div className="crew-event-grid">
+              </div>
 
-        {events.map((event) => (
-          <div
-            className="crew-event-card"
-            key={event.id}
-          >
+              {events.length === 0 ? (
+                <div className="crew-empty-state">
 
-            <div className="event-card-status">
-            <span>{getEventStatus(event)}</span>
-            </div>
+                  <div className="empty-icon">▤</div>
 
-            <h3>{event.title}</h3>
+                  <h3>No events found</h3>
 
-            <div className="event-info">
+                  <p>
+                    Events created by you will appear
+                    here.
+                  </p>
 
-              <span>
-                📍 {event.location || "Location not specified"}
-              </span>
+                </div>
+              ) : (
+                <div className="crew-event-grid">
 
-              <span>
-                📅 {event.event_date
-                  ? new Date(event.event_date).toLocaleDateString("en-IN", {
-                      day: "2-digit",
-                      month: "long",
-                      year: "numeric"
-                    })
-                  : "Date not specified"}
-              </span>
+                  {events.map((event) => (
+                    <div
+                      className="crew-event-card"
+                      key={event.id}
+                    >
 
-              <span>
-  👥{" "}
-  {eventProfessionals[event.id]
-    ? `${eventProfessionals[event.id].length} Professionals`
-    : "Loading team..."}
-</span>
+                      <div className="event-card-status">
+                        {getEventStatus(event)}
+                      </div>
 
-            </div>
+                      <h3>{event.title}</h3>
 
-            {event.description && (
-              <p>
-                {event.description}
-              </p>
-            )}
-             <button
-  className="crew-primary-button"
-  onClick={() => {
-    fetchEventProfessionals(event.id);
-    fetchEventAttendance(event.id);
-  }}
->
-  View Team & Attendance
-</button>
-          </div>
-        ))}
+                      <div className="event-info">
 
-      </div>
-    )}
+<<<<<<< HEAD
+               
+=======
+                        <span>
+                          📍{" "}
+                          {event.location ||
+                            "Location not specified"}
+                        </span>
 
-  </section>
-)}
+                        <span>
+                          📅{" "}
+                          {event.event_date
+                            ? new Date(
+                                event.event_date
+                              ).toLocaleDateString(
+                                "en-IN",
+                                {
+                                  day: "2-digit",
+                                  month: "long",
+                                  year: "numeric"
+                                }
+                              )
+                            : "Date not specified"}
+                        </span>
 
+                        <span>
+                          👥{" "}
+                          {eventProfessionals[event.id]
+                            ? `${eventProfessionals[event.id].length} Professionals`
+                            : "Loading team..."}
+                        </span>
 
-{selectedAttendanceEvent && (
-  <section className="crew-section">
+                      </div>
 
-    <div className="crew-section-heading">
-      <h2>Team & Attendance</h2>
+                      {event.description && (
+                        <p>{event.description}</p>
+                      )}
 
-      <button
-        className="crew-secondary-button"
-        onClick={() => {
-          setSelectedAttendanceEvent(null);
-          setEventAttendance([]);
-        }}
-      >
-        Close
-      </button>
-    </div>
+                      <button
+                        className="crew-primary-button"
+                        onClick={() => {
+                          fetchEventProfessionals(event.id);
+                          fetchEventAttendance(event.id);
+                        }}
+                      >
+                        View Team & Attendance
+                      </button>
 
-    {eventProfessionals[selectedAttendanceEvent]?.length === 0 ? (
-      <div className="crew-empty-state">
-        <h3>No professionals assigned</h3>
-        <p>
-          No team members have been assigned to this event.
-        </p>
-      </div>
-    ) : (
-      <div className="crew-people-grid">
+                    </div>
+                  ))}
 
-        {eventProfessionals[selectedAttendanceEvent]?.map(
-          (professional) => {
+                </div>
+              )}
 
-            const attendance = eventAttendance.find(
-              (person) =>
-                person.professional_id ===
-                professional.professional_id
-            );
+            </section>
+          )}
 
-            return (
-              <div
-                className="crew-person-card"
-                key={professional.professional_id}
-              >
+          {/* ================= FIND ORGANIZERS ================= */}
 
-                <div className="crew-person-avatar">
-                  {professional.name
-                    ? professional.name
-                        .split(" ")
-                        .map((word) => word[0])
-                        .join("")
-                        .toUpperCase()
-                    : "PR"}
+          {activeSection === "organizers" && (
+            <section className="crew-section">
+
+              <div className="crew-section-heading">
+
+                <div>
+                  <h2>Find Organizers</h2>
+
+                  <p>
+                    Connect with event organizers.
+                  </p>
                 </div>
 
-                <h3>{professional.name}</h3>
-
-                <p>
-                  📧 {professional.email}
-                </p>
-
-                <p>
-                  Status:{" "}
-                  <strong>
-                    {attendance?.status || "Absent"}
-                  </strong>
-                </p>
-
-                <p>
-                  Check-in:{" "}
-                  {attendance?.check_in
-                    ? new Date(
-                        attendance.check_in
-                      ).toLocaleString("en-IN")
-                    : "Not checked in"}
-                </p>
-
-               
+>>>>>>> c384781 (Update EventSaathi project)
               </div>
-            );
-          }
-        )}
 
-      </div>
-    )}
-  </section>
-)}
+              {organizers.length === 0 ? (
+                <div className="crew-empty-state">
 
-{/* ================= FIND ORGANIZERS ================= */}
-{activeSection === "organizers" && (
-  <section className="crew-section">
+                  <div className="empty-icon">♧</div>
 
-    <div className="crew-section-heading">
-      <div>
-        <h2>Find Organizers</h2>
-        <p>
-          Connect with event organizers.
-        </p>
-      </div>
-    </div>
+                  <h3>No organizers found</h3>
 
-    {organizers.length === 0 ? (
-      <div className="crew-empty-state">
-        <div className="empty-icon">♧</div>
+                  <p>
+                    Registered organizers will appear
+                    here.
+                  </p>
 
-        <h3>No organizers found</h3>
-
-        <p>
-          Registered organizers will appear here.
-        </p>
-      </div>
-    ) : (
-      <div className="crew-people-grid">
-
-        {organizers.map((organizer) => (
-          <div
-            className="crew-person-card"
-            key={organizer.id}
-          >
-
-            <div className="crew-person-avatar">
-              {organizer.name
-                ? organizer.name
-                    .split(" ")
-                    .map((word) => word[0])
-                    .join("")
-                    .toUpperCase()
-                : "OR"}
-            </div>
-
-            <h3>{organizer.name}</h3>
-
-            <p>
-              Event Organizer
-            </p>
-
-            <span>
-              📧 {organizer.email}
-            </span>
-
-            <button
-              className="crew-primary-button"
-              onClick={() =>
-                handleConnect(organizer.id, organizer.name)
-              }
-            >
-              Connect
-            </button>
-            
-
-          </div>
-        ))}
-
-      </div>
-    )}
-
-  </section>
-)}
-
-          {/* ================= PROFESSIONALS ================= */}
-
-          {activeSection === "workers" && (
-  <section className="crew-section">
-
-    <div className="crew-section-heading">
-      <div>
-        <h2>Find Professionals</h2>
-        <p>
-          Find verified professionals for your events.
-        </p>
-      </div>
-    </div>
-
-    {professionals.length === 0 ? (
-      <div className="crew-empty-state">
-        <div className="empty-icon">♧</div>
-
-        <h3>No professionals found</h3>
-
-        <p>
-          Registered professionals will appear here.
-        </p>
-      </div>
-    ) : (
-      <div className="crew-people-grid">
-
-        {professionals.map((professional) => (
-          <div
-            className="crew-person-card"
-            key={professional.id}
-          >
-
-            <div className="crew-person-avatar">
-              {professional.name
-                ? professional.name
-                    .split(" ")
-                    .map((word) => word[0])
-                    .join("")
-                    .toUpperCase()
-                : "PR"}
-            </div>
-
-            <h3>{professional.name}</h3>
-
-            <p>
-              Event Professional
-            </p>
-
-            <span>
-              📧 {professional.email}
-            </span>
-
-            <div className="crew-rating">
-              ★ Profile
-            </div>
-
-            <button
-              className="crew-primary-button"
-              onClick={() =>
-                handleViewProfile(professional.name)
-              }
-            >
-              View Profile
-            </button>
-
-          </div>
-        ))}
-
-      </div>
-    )}
-
-  </section>
-)}
-          {/* ================= REQUESTS ================= */}
-
-          {activeSection === "requests" && (
-  <section className="crew-section">
-
-    <div className="crew-section-heading">
-      <div>
-        <h2>Connection Requests</h2>
-        <p>
-          Manage collaboration requests from organizers.
-        </p>
-      </div>
-    </div>
-
-    {connectionRequests.length === 0 ? (
-      <div className="crew-empty-state">
-        <div className="empty-icon">♧</div>
-
-        <h3>No connection requests</h3>
-
-        <p>
-          New collaboration requests will appear here.
-        </p>
-      </div>
-    ) : (
-      <div className="crew-people-grid">
-
-        {connectionRequests.map((request) => (
-          <div
-            className="crew-person-card"
-            key={request.id}
-          >
-
-            <div className="crew-person-avatar">
-              {request.sender_name
-                ? request.sender_name
-                    .split(" ")
-                    .map((word) => word[0])
-                    .join("")
-                    .toUpperCase()
-                : "OR"}
-            </div>
-
-            <h3>{request.sender_name}</h3>
-
-            <p>
-              Event Organizer
-            </p>
-
-            <span>
-              📧 {request.sender_email}
-            </span>
-
-            <span>
-              📅 {new Date(request.created_at).toLocaleDateString()}
-            </span>
-
-            <div className="crew-request-actions">
-
-              <button
-                className="crew-primary-button"
-                onClick={() =>
-                  handleAcceptRequest(request.id)
-                }
-              >
-                Accept
-              </button>
-
-              <button
-                className="crew-secondary-button"
-                onClick={() =>
-                  handleRejectRequest(request.id)
-                }
-              >
-                Reject
-              </button>
-
-            </div>
-
-          </div>
-        ))}
-
-      </div>
-    )}
-
-  </section>
-)}
-          {/* ================= CONNECTIONS ================= */}
-
-          {activeSection === "connections" && (
-  <section className="crew-section">
-
-    <div className="crew-section-heading">
-      <div>
-        <h2>My Connections</h2>
-        <p>Your accepted collaboration connections.</p>
-      </div>
-    </div>
-
-    {connections.length === 0 ? (
-      <div className="crew-empty-state">
-        <div className="empty-icon">♧</div>
-
-        <h3>No connections yet</h3>
-
-        <p>
-          Accepted collaboration connections will appear here.
-        </p>
-      </div>
-    ) : (
-      <div className="crew-people-grid">
-
-        {connections.map((connection) => (
-          <div
-            className="crew-person-card"
-            key={connection.connection_id}
-          >
-
-            <div className="crew-person-avatar">
-              {connection.name
-                ? connection.name
-                    .split(" ")
-                    .map((word) => word[0])
-                    .join("")
-                    .toUpperCase()
-                : "U"}
-            </div>
-
-            <h3>{connection.name}</h3>
-
-            <p>Event Organizer</p>
-
-            <span>
-              📧 {connection.email}
-            </span>
-
-            <span>
-              🤝 Connected
-            </span>
-
-            <button
-  className="crew-primary-button"
-  onClick={() => handleViewProfile(connection.user_id)}
->
-  View Profile
-</button>
-
-          </div>
-        ))}
-
-      </div>
-    )}
-
-  </section>
-)}
-          {/* ================= TEAM ================= */}
-
-          {activeSection === "team" && (
-  <section className="crew-section">
-
-    <div className="crew-section-heading">
-      <div>
-        <h2>Selected Team</h2>
-        <p>
-          Professionals assigned to each of your events.
-        </p>
-      </div>
-    </div>
-
-    {events.length === 0 ? (
-
-      <div className="crew-empty-state">
-        <div className="empty-icon">♟</div>
-
-        <h3>No events found</h3>
-
-        <p>
-          Create an event and select professionals
-          to build your event team.
-        </p>
-      </div>
-
-    ) : (
-
-      <div className="crew-event-grid">
-
-        {events.map((event) => {
-
-          const team =
-            eventProfessionals[event.id] || [];
-
-          return (
-
-            <div
-              className="crew-form-card"
-              key={event.id}
-            >
-
-              <h2>{event.title}</h2>
-
-              <p>
-                📍{" "}
-                {event.location ||
-                  "Location not specified"}
-              </p>
-
-              <p>
-                📅 {event.event_date}
-              </p>
-
-              <hr />
-
-              <h3>
-                Event Team ({team.length})
-              </h3>
-
-              {team.length === 0 ? (
-
-                <p>
-                  No professionals selected
-                  for this event.
-                </p>
-
+                </div>
               ) : (
-
                 <div className="crew-people-grid">
 
-                  {team.map((professional) => (
-
+                  {organizers.map((organizer) => (
                     <div
                       className="crew-person-card"
-                      key={professional.professional_id}
+                      key={organizer.id}
+                    >
+
+                      <div className="crew-person-avatar">
+                        {organizer.name
+                          ? organizer.name
+                              .split(" ")
+                              .map((word) => word[0])
+                              .join("")
+                              .toUpperCase()
+                          : "OR"}
+                      </div>
+
+                      <h3>{organizer.name}</h3>
+
+                      <p>Event Organizer</p>
+
+                      <span>
+                        📧 {organizer.email}
+                      </span>
+
+                      <button
+                        className="crew-primary-button"
+                        onClick={() =>
+                          handleConnect(
+                            organizer.id,
+                            organizer.name
+                          )
+                        }
+                      >
+                        Connect
+                      </button>
+
+                    </div>
+                  ))}
+
+                </div>
+              )}
+
+            </section>
+          )}
+
+          {/* ================= FIND PROFESSIONALS ================= */}
+
+          {activeSection === "workers" && (
+            <section className="crew-section">
+
+              <div className="crew-section-heading">
+
+                <div>
+                  <h2>Find Professionals</h2>
+
+                  <p>
+                    Discover professionals for your
+                    events.
+                  </p>
+                </div>
+
+              </div>
+
+              {professionals.length === 0 ? (
+                <div className="crew-empty-state">
+
+                  <div className="empty-icon">♙</div>
+
+                  <h3>No professionals found</h3>
+
+                  <p>
+                    Registered professionals will appear
+                    here.
+                  </p>
+
+                </div>
+              ) : (
+                <div className="crew-people-grid">
+
+                  {professionals.map((professional) => (
+                    <div
+                      className="crew-person-card"
+                      key={professional.id}
                     >
 
                       <div className="crew-person-avatar">
@@ -1989,104 +2250,135 @@ const updateAttendance = async (eventId, professionalId, status) => {
                         {professional.name
                           ? professional.name
                               .split(" ")
-                              .map(
-                                (word) => word[0]
-                              )
+                              .map((word) => word[0])
                               .join("")
                               .toUpperCase()
                           : "PR"}
 
                       </div>
 
-                      <h3>
-                        {professional.name}
-                      </h3>
+                      <h3>{professional.name}</h3>
 
-                      <p>
-                        Event Professional
-                      </p>
+                      <p>Event Professional</p>
 
                       <span>
                         📧 {professional.email}
                       </span>
 
-                      <p>
-                        ✓ Assigned to this event
-                      </p>
+                      <button
+                        className="crew-primary-button"
+                        onClick={() =>
+                          handleViewProfile(
+                            professional.id
+                          )
+                        }
+                      >
+                        View Profile
+                      </button>
+
+                      <button
+                        className="crew-outline-button"
+                        onClick={() =>
+                          handleConnect(
+                            professional.id,
+                            professional.name
+                          )
+                        }
+                      >
+                        Connect
+                      </button>
 
                     </div>
-
                   ))}
 
                 </div>
-
               )}
 
-            </div>
+            </section>
+          )}
 
-          );
+          {/* ================= PROFESSIONAL PROFILE MODAL ================= */}
 
-        })}
+          {selectedProfile && (
+            <div className="crew-profile-modal">
 
-      </div>
+              <div className="crew-profile-card">
 
-    )}
+                <button
+                  type="button"
+                  className="crew-close-btn"
+                  onClick={() =>
+                    setSelectedProfile(null)
+                  }
+                >
+                  ×
+                </button>
 
-  </section>
-)}
+                <div className="crew-large-avatar">
 
-{/* ================= MESSAGES ================= */}
+                  {selectedProfile?.user?.name
+                    ? selectedProfile.user.name
+                        .split(" ")
+                        .map((word) => word[0])
+                        .join("")
+                        .toUpperCase()
+                    : "PR"}
 
-{activeSection === "chat" && (
-  <section className="crew-section">
+                </div>
 
-    <div className="crew-chat">
+                <h2>
+                  {selectedProfile?.user?.name ||
+                    "Professional"}
+                </h2>
 
-      {/* LEFT - PEOPLE LIST */}
-<div className="crew-chat-sidebar">
+                <p>
+                  📧{" "}
+                  {selectedProfile?.user?.email ||
+                    "Not available"}
+                </p>
 
-  <div className="crew-chat-sidebar-header">
-    <h3>Messages</h3>
-    <span>Select an event and professional</span>
-  </div>
+                {selectedProfile?.profile && (
+                  <>
+                    <hr />
 
-  {/* SELECT EVENT */}
-  <select
-    value={selectedChatEvent?.id || ""}
-    onChange={(e) => {
-      const selectedEvent = events.find(
-        (item) => Number(item.id) === Number(e.target.value)
-      );
+                    <p>
+                      📍{" "}
+                      <strong>City:</strong>{" "}
+                      {selectedProfile.profile.city ||
+                        "Not specified"}
+                    </p>
 
-      setSelectedChatEvent(selectedEvent || null);
-      setSelectedChat(null);
-      setMessages([]);
-    }}
-  >
-    <option value="">Select Event</option>
+                    <p>
+                      💼{" "}
+                      <strong>Experience:</strong>{" "}
+                      {selectedProfile.profile
+                        .experience_years || 0}{" "}
+                      years
+                    </p>
 
-    {events.map((event) => (
-      <option key={event.id} value={event.id}>
-        {event.title}
-      </option>
-    ))}
-  </select>
+                    <p>
+                      📞{" "}
+                      <strong>Phone:</strong>{" "}
+                      {selectedProfile.profile.phone ||
+                        "Not specified"}
+                    </p>
 
-  {/* PROFESSIONALS */}
-  {selectedChatEvent &&
-  eventProfessionals[selectedChatEvent.id]?.length > 0 ? (
+                    <p>
+                      📝{" "}
+                      <strong>Bio:</strong>{" "}
+                      {selectedProfile.profile.bio ||
+                        "No bio available"}
+                    </p>
+                  </>
+                )}
 
-    eventProfessionals[selectedChatEvent.id].map((person) => {
+                {selectedProfile?.services?.length > 0 && (
+                  <>
+                    <h3>Services</h3>
 
-      const initials = person.name
-        ? person.name
-            .split(" ")
-            .map((word) => word[0])
-            .join("")
-            .slice(0, 2)
-            .toUpperCase()
-        : "U";
+                    <div className="crew-service-list">
 
+<<<<<<< HEAD
       return (
         <button
           key={person.professional_id}
@@ -2111,234 +2403,899 @@ const updateAttendance = async (eventId, professionalId, status) => {
             );
           }}
         >
+=======
+                      {selectedProfile.services.map(
+                        (service) => (
+                          <span key={service.id}>
+                            {service.name ||
+                              service.service_name}
+                          </span>
+                        )
+                      )}
+>>>>>>> c384781 (Update EventSaathi project)
 
-          <div className="crew-person-avatar small">
-            {initials}
-          </div>
+                    </div>
+                  </>
+                )}
 
-          <div className="crew-chat-person-info">
-            <strong>{person.name}</strong>
-            <span>Professional</span>
-          </div>
-
-        </button>
-      );
-    })
-
-  ) : (
-
-    <div className="crew-chat-no-people">
-      <p>
-        {selectedChatEvent
-          ? "No professionals selected for this event."
-          : "Select an event first."}
-      </p>
-    </div>
-
-  )}
-
-</div>
-
-      {/* RIGHT - CHAT WINDOW */}
-      <div className="crew-chat-window">
-
-        {!selectedChat ? (
-
-          <div className="crew-chat-empty">
-            <div className="crew-empty-icon">
-              💬
-            </div>
-
-            <h3>Select a conversation</h3>
-
-            <p>
-              Select a professional or organizer from the left
-              to start messaging.
-            </p>
-          </div>
-
-        ) : (
-
-          <>
-            {/* CHAT HEADER */}
-            <div className="crew-chat-header">
-
-              <div className="crew-person-avatar">
-                {selectedChat.initials}
-              </div>
-
-              <div>
-                <strong>
-                  {selectedChat.name}
-                </strong>
-
-                <span>
-                  {selectedChat.role}
-                </span>
               </div>
 
             </div>
+          )}
 
+          {/* ================= REQUESTS ================= */}
 
-            {/* MESSAGES */}
-            <div className="crew-chat-messages">
+          {activeSection === "requests" && (
+            <section className="crew-section">
 
-              {messages.length === 0 ? (
+              <div className="crew-section-heading">
 
-                <div className="crew-no-messages">
-                  <span>No messages yet.</span>
+                <div>
+                  <h2>Connection Requests</h2>
 
                   <p>
-                    Start the conversation with{" "}
-                    <strong>
-                      {selectedChat.name}
-                    </strong>
+                    Manage collaboration requests from
+                    organizers.
                   </p>
                 </div>
 
+              </div>
+
+              {connectionRequests.length === 0 ? (
+                <div className="crew-empty-state">
+
+                  <div className="empty-icon">♧</div>
+
+                  <h3>No connection requests</h3>
+
+                  <p>
+                    New collaboration requests will
+                    appear here.
+                  </p>
+
+                </div>
               ) : (
+                <div className="crew-people-grid">
 
-                messages.map((msg) => {
-
-                  const currentUserId = Number(user?.id);
-
-                  const isMine =
-                    Number(msg.sender_id) === currentUserId;
-
-                  return (
+                  {connectionRequests.map((request) => (
                     <div
-                      key={msg.id}
-                      className={
-                        isMine
-                          ? "crew-message-row mine"
-                          : "crew-message-row"
-                      }
+                      className="crew-person-card"
+                      key={request.id}
                     >
 
-                      <div className="crew-message-bubble">
+                      <div className="crew-person-avatar">
 
-                        <p>
-                          {msg.message}
-                        </p>
+                        {request.sender_name
+                          ? request.sender_name
+                              .split(" ")
+                              .map((word) => word[0])
+                              .join("")
+                              .toUpperCase()
+                          : "OR"}
 
-                        <span>
-                          {new Date(
-                            msg.created_at
-                          ).toLocaleString()}
-                        </span>
+                      </div>
+
+                      <h3>
+                        {request.sender_name}
+                      </h3>
+
+                      <p>Event Organizer</p>
+
+                      <span>
+                        📧 {request.sender_email}
+                      </span>
+
+                      <span>
+                        📅{" "}
+                        {new Date(
+                          request.created_at
+                        ).toLocaleDateString()}
+                      </span>
+
+                      <div className="crew-request-actions">
+
+                        <button
+                          className="crew-primary-button"
+                          onClick={() =>
+                            handleAcceptRequest(
+                              request.id
+                            )
+                          }
+                        >
+                          Accept
+                        </button>
+
+                        <button
+                          className="crew-secondary-button"
+                          onClick={() =>
+                            handleRejectRequest(
+                              request.id
+                            )
+                          }
+                        >
+                          Reject
+                        </button>
 
                       </div>
 
                     </div>
-                  );
+                  ))}
 
-                })
-
+                </div>
               )}
 
-            </div>
+            </section>
+          )}
 
+          {/* ================= CONNECTIONS ================= */}
 
-            {/* MESSAGE INPUT */}
-            <form
-              className="crew-chat-input"
-              onSubmit={handleSendMessage}
-            >
+          {activeSection === "connections" && (
+            <section className="crew-section">
 
-              <input
-                type="text"
-                placeholder={`Message ${selectedChat.name}...`}
-                value={messageText}
-                onChange={(e) =>
-                  setMessageText(e.target.value)
-                }
-              />
+              <div className="crew-section-heading">
 
-              <button type="submit">
-                Send
-              </button>
+                <div>
+                  <h2>My Connections</h2>
 
-            </form>
+                  <p>
+                    Your accepted collaboration
+                    connections.
+                  </p>
+                </div>
 
-          </>
+              </div>
 
-        )}
+              {connections.length === 0 ? (
+                <div className="crew-empty-state">
 
-      </div>
+                  <div className="empty-icon">♧</div>
 
-    </div>
+                  <h3>No connections yet</h3>
 
-  </section>
-)}
+                  <p>
+                    Accepted collaboration connections
+                    will appear here.
+                  </p>
+
+                </div>
+              ) : (
+                <div className="crew-people-grid">
+
+                  {connections.map((connection) => (
+                    <div
+                      className="crew-person-card"
+                      key={connection.connection_id}
+                    >
+
+                      <div className="crew-person-avatar">
+
+                        {connection.name
+                          ? connection.name
+                              .split(" ")
+                              .map((word) => word[0])
+                              .join("")
+                              .toUpperCase()
+                          : "U"}
+
+                      </div>
+
+                      <h3>{connection.name}</h3>
+
+                      <p>
+                        {connection.role ||
+                          "Connected User"}
+                      </p>
+
+                      <span>
+                        📧 {connection.email}
+                      </span>
+
+                      <span>🤝 Connected</span>
+
+                      <button
+                        className="crew-primary-button"
+                        onClick={() =>
+                          handleViewProfile(
+                            connection.user_id
+                          )
+                        }
+                      >
+                        View Profile
+                      </button>
+
+                    </div>
+                  ))}
+
+                </div>
+              )}
+
+            </section>
+          )}
+
+          {/* ================= TEAM ================= */}
+
+          {activeSection === "team" && (
+            <section className="crew-section">
+
+              <div className="crew-section-heading">
+
+                <div>
+                  <h2>Selected Team</h2>
+
+                  <p>
+                    Professionals assigned to each of
+                    your events.
+                  </p>
+                </div>
+
+              </div>
+
+              {events.length === 0 ? (
+                <div className="crew-empty-state">
+
+                  <div className="empty-icon">♟</div>
+
+                  <h3>No events found</h3>
+
+                  <p>
+                    Create an event and select
+                    professionals to build your event
+                    team.
+                  </p>
+
+                </div>
+              ) : (
+                <div className="crew-event-grid">
+
+                  {events.map((event) => {
+
+                    const team =
+                      eventProfessionals[event.id] || [];
+
+                    return (
+                      <div
+                        className="crew-form-card"
+                        key={event.id}
+                      >
+
+                        <h2>{event.title}</h2>
+
+                        <p>
+                          📍{" "}
+                          {event.location ||
+                            "Location not specified"}
+                        </p>
+
+                        <p>
+                          📅 {event.event_date}
+                        </p>
+
+                        <hr />
+
+                        <h3>
+                          Event Team ({team.length})
+                        </h3>
+
+                        {team.length === 0 ? (
+                          <p>
+                            No professionals selected
+                            for this event.
+                          </p>
+                        ) : (
+                          <div className="crew-people-grid">
+
+                            {team.map((professional) => (
+                              <div
+                                className="crew-person-card"
+                                key={
+                                  professional.professional_id
+                                }
+                              >
+
+                                <div className="crew-person-avatar">
+
+                                  {professional.name
+                                    ? professional.name
+                                        .split(" ")
+                                        .map(
+                                          (word) =>
+                                            word[0]
+                                        )
+                                        .join("")
+                                        .toUpperCase()
+                                    : "PR"}
+
+                                </div>
+
+                                <h3>
+                                  {professional.name}
+                                </h3>
+
+                                <p>
+                                  Event Professional
+                                </p>
+
+                                <span>
+                                  📧{" "}
+                                  {professional.email}
+                                </span>
+
+                                <p>
+                                  ✓ Assigned to this event
+                                </p>
+
+                              </div>
+                            ))}
+
+                          </div>
+                        )}
+
+                      </div>
+                    );
+                  })}
+
+                </div>
+              )}
+
+            </section>
+          )}
+
+          {/* ================= MESSAGES ================= */}
+
+          {activeSection === "chat" && (
+            <section className="crew-section">
+
+              <div className="crew-chat">
+
+                <div className="crew-chat-sidebar">
+
+                  <div className="crew-chat-sidebar-header">
+
+                    <h3>Messages</h3>
+
+                    <span>
+                      Select an event and professional
+                    </span>
+
+                  </div>
+
+                  {/* PERSONAL CHATS */}
+
+                  {connections.length > 0 && (
+                    <div className="chat-extra-section">
+
+                      <h4>My Connections</h4>
+
+                      {connections.map((connection) => {
+
+                        const otherUserId =
+                          Number(connection.user_id);
+
+                        const otherUserName =
+                          connection.name || "Organizer";
+
+                        const initials =
+                          otherUserName
+                            .split(" ")
+                            .map((word) => word[0])
+                            .join("")
+                            .slice(0, 2)
+                            .toUpperCase();
+
+                        return (
+                          <button
+                            key={otherUserId}
+                            type="button"
+                            className={
+                              selectedChat?.id ===
+                                otherUserId &&
+                              chatType === "personal"
+                                ? "crew-chat-person active"
+                                : "crew-chat-person"
+                            }
+                            onClick={async () => {
+
+                              try {
+
+                                const response =
+                                  await fetch(
+                                    "http://localhost:5500/api/conversations/personal",
+                                    {
+                                      method: "POST",
+                                      headers: {
+                                        "Content-Type":
+                                          "application/json"
+                                      },
+                                      body: JSON.stringify({
+                                        user1_id: user.id,
+                                        user2_id:
+                                          otherUserId
+                                      })
+                                    }
+                                  );
+
+                                const data =
+                                  await response.json();
+
+                                if (!response.ok) {
+                                  throw new Error(
+                                    data.message ||
+                                      "Unable to open chat"
+                                  );
+                                }
+
+                                setSelectedChat({
+                                  id: otherUserId,
+                                  name: otherUserName,
+                                  role:
+                                    connection.role ||
+                                    "Organizer",
+                                  initials
+                                });
+
+                                setSelectedConversationId(
+                                  data.conversation_id
+                                );
+
+                                setChatType("personal");
+
+                                setSelectedChatEvent(null);
+
+                                setMessages([]);
+
+                                setMessageText("");
+
+                              } catch (error) {
+
+                                console.error(
+                                  "Open Personal Chat Error:",
+                                  error
+                                );
+
+                                alert(error.message);
+
+                              }
+
+                            }}
+                          >
+
+                            <div className="crew-person-avatar small">
+                              {initials}
+                            </div>
+
+                            <div className="crew-chat-person-info">
+
+                              <strong>
+                                {otherUserName}
+                              </strong>
+
+                              <span>
+                                {connection.role ||
+                                  "Organizer"}
+                              </span>
+
+                            </div>
+
+                          </button>
+                        );
+                      })}
+
+                    </div>
+                  )}
+
+                  {/* EVENT SELECTION */}
+
+                  <select
+                    value={selectedChatEvent?.id || ""}
+                    onChange={(e) => {
+
+                      const selectedEvent =
+                        events.find(
+                          (item) =>
+                            Number(item.id) ===
+                            Number(e.target.value)
+                        );
+
+                      setSelectedChatEvent(
+                        selectedEvent || null
+                      );
+
+                      setSelectedChat(null);
+                      setSelectedConversationId(null);
+                      setChatType("professional");
+                      setMessages([]);
+                      setMessageText("");
+
+                    }}
+                  >
+
+                    <option value="">
+                      Select Event
+                    </option>
+
+                    {events.map((event) => (
+                      <option
+                        key={event.id}
+                        value={event.id}
+                      >
+                        {event.title}
+                      </option>
+                    ))}
+
+                  </select>
+
+                  {/* PROFESSIONAL LIST */}
+
+                  {selectedChatEvent &&
+                  eventProfessionals[
+                    selectedChatEvent.id
+                  ]?.length > 0 ? (
+
+                    eventProfessionals[
+                      selectedChatEvent.id
+                    ].map((person) => {
+
+                      const initials =
+                        person.name
+                          ? person.name
+                              .split(" ")
+                              .map(
+                                (word) =>
+                                  word[0]
+                              )
+                              .join("")
+                              .slice(0, 2)
+                              .toUpperCase()
+                          : "U";
+
+                      return (
+                        <button
+                          key={person.professional_id}
+                          type="button"
+                          className={
+                            selectedChat?.id ===
+                              person.professional_id &&
+                            chatType === "professional"
+                              ? "crew-chat-person active"
+                              : "crew-chat-person"
+                          }
+                          onClick={() => {
+
+                            setSelectedChat({
+                              id: person.professional_id,
+                              name: person.name,
+                              role: "Professional",
+                              email: person.email,
+                              initials
+                            });
+
+                            setSelectedConversationId(null);
+                            setChatType("professional");
+                            setMessages([]);
+                            setMessageText("");
+
+                          }}
+                        >
+
+                          <div className="crew-person-avatar small">
+                            {initials}
+                          </div>
+
+                          <div className="crew-chat-person-info">
+
+                            <strong>
+                              {person.name}
+                            </strong>
+
+                            <span>
+                              Professional
+                            </span>
+
+                          </div>
+
+                        </button>
+                      );
+                    })
+
+                  ) : (
+                    <div className="crew-chat-no-people">
+
+                      <p>
+                        {selectedChatEvent
+                          ? "No professionals selected for this event."
+                          : "Select an event first."}
+                      </p>
+
+                    </div>
+                  )}
+
+                </div>
+
+                {/* CHAT WINDOW */}
+
+                <div className="crew-chat-window">
+
+                  {!selectedChat ? (
+
+                    <div className="crew-chat-empty">
+
+                      <div className="crew-empty-icon">
+                        💬
+                      </div>
+
+                      <h3>
+                        Select a conversation
+                      </h3>
+
+                      <p>
+                        Select a professional or organizer
+                        from the left to start messaging.
+                      </p>
+
+                    </div>
+
+                  ) : (
+
+                    <>
+
+                      <div className="crew-chat-header">
+
+                        <div className="crew-person-avatar">
+                          {selectedChat.initials}
+                        </div>
+
+                        <div>
+
+                          <strong>
+                            {selectedChat.name}
+                          </strong>
+
+                          <span>
+                            {selectedChat.role}
+                          </span>
+
+                        </div>
+
+                      </div>
+
+                      <div className="crew-chat-messages">
+
+                        {messages.length === 0 ? (
+
+                          <div className="crew-no-messages">
+
+                            <span>
+                              No messages yet.
+                            </span>
+
+                            <p>
+                              Start the conversation
+                              with{" "}
+                              <strong>
+                                {selectedChat.name}
+                              </strong>
+                            </p>
+
+                          </div>
+
+                        ) : (
+
+                          messages.map((msg) => {
+
+                            const currentUserId =
+                              Number(user?.id);
+
+                            const isMine =
+                              Number(msg.sender_id) ===
+                              currentUserId;
+
+                            return (
+                              <div
+                                key={msg.id}
+                                className={
+                                  isMine
+                                    ? "crew-message-row mine"
+                                    : "crew-message-row"
+                                }
+                              >
+
+                                <div className="crew-message-bubble">
+
+                                  <p>
+                                    {msg.message}
+                                  </p>
+
+                                  <span>
+                                    {new Date(
+                                      msg.created_at
+                                    ).toLocaleString()}
+                                  </span>
+
+                                </div>
+
+                              </div>
+                            );
+                          })
+
+                        )}
+
+                      </div>
+
+                      <form
+                        className="crew-chat-input"
+                        onSubmit={handleSendMessage}
+                      >
+
+                        <input
+                          type="text"
+                          placeholder={`Message ${selectedChat.name}...`}
+                          value={messageText}
+                          onChange={(e) =>
+                            setMessageText(
+                              e.target.value
+                            )
+                          }
+                        />
+
+                        <button type="submit">
+                          Send
+                        </button>
+
+                      </form>
+
+                    </>
+
+                  )}
+
+                </div>
+
+              </div>
+
+            </section>
+          )}
 
           {/* ================= ATTENDANCE ================= */}
 
           {activeSection === "attendance" && (
-  <section className="crew-section">
-    <h2>Event Attendance</h2>
+            <section className="crew-section">
 
-    <div className="crew-event-grid">
-      {events.length === 0 ? (
-        <p>No events available.</p>
-      ) : (
-        events.map((event) => (
-          <div className="crew-form-card" key={event.id}>
-            <h3>{event.title}</h3>
+              <h2>Event Attendance</h2>
 
-            <p>
-              <strong>Date:</strong> {event.event_date}
-            </p>
+              <div className="crew-event-grid">
 
-            <p>
-              <strong>Location:</strong>{" "}
-              {event.location || "Not specified"}
-            </p>
+                {events.length === 0 ? (
+                  <p>No events available.</p>
+                ) : (
+                  events.map((event) => (
+                    <div
+                      className="crew-form-card"
+                      key={event.id}
+                    >
 
-            <button
-              className="crew-primary-button"
-              onClick={() => fetchEventAttendance(event.id)}
-            >
-              View Attendance
-            </button>
-          </div>
-        ))
-      )}
-    </div>
+                      <h3>{event.title}</h3>
 
-    {selectedAttendanceEvent && (
-      <div className="crew-form-card">
-        <h3>Attendance</h3>
+                      <p>
+                        <strong>Date:</strong>{" "}
+                        {event.event_date}
+                      </p>
 
-        {eventAttendance.length === 0 ? (
-          <p>No professionals assigned to this event.</p>
-        ) : (
-          eventAttendance.map((person) => (
-            <div
-              key={person.id}
-              className="crew-person-card"
-            >
-              <h3>{person.name}</h3>
+                      <p>
+                        <strong>Location:</strong>{" "}
+                        {event.location ||
+                          "Not specified"}
+                      </p>
 
-              <p>{person.email}</p>
+                      <button
+                        className="crew-primary-button"
+                        onClick={() =>
+                          fetchEventAttendance(event.id)
+                        }
+                      >
+                        View Attendance
+                      </button>
 
-              <p>
-                Status: <strong>{person.status}</strong>
-              </p>
+                    </div>
+                  ))
+                )}
 
-              <p>
-                Check In:{" "}
-                {person.check_in
-                  ? new Date(person.check_in).toLocaleString()
-                  : "Not checked in"}
-              </p>
+              </div>
 
-            </div>
-          ))
-        )}
-      </div>
-    )}
-  </section>
-)}
+              {selectedAttendanceEvent && (
+                <div className="crew-form-card">
+
+                  <div className="crew-section-heading">
+
+                    <h3>Attendance</h3>
+
+                    <button
+                      className="crew-secondary-button"
+                      onClick={() => {
+                        setSelectedAttendanceEvent(null);
+                        setEventAttendance([]);
+                      }}
+                    >
+                      Close
+                    </button>
+
+                  </div>
+
+                  {eventAttendance.length === 0 ? (
+                    <p>
+                      No professionals assigned to this
+                      event.
+                    </p>
+                  ) : (
+                    <div className="crew-people-grid">
+
+                      {eventAttendance.map((person) => (
+                        <div
+                          key={person.id}
+                          className="crew-person-card"
+                        >
+
+                          <h3>{person.name}</h3>
+
+                          <p>{person.email}</p>
+
+                          <p>
+                            Status:{" "}
+                            <strong>
+                              {person.status}
+                            </strong>
+                          </p>
+
+                          <p>
+                            Check In:{" "}
+                            {person.check_in
+                              ? new Date(
+                                  person.check_in
+                                ).toLocaleString()
+                              : "Not checked in"}
+                          </p>
+
+                          <div className="attendance-buttons">
+
+                            <button
+                              type="button"
+                              onClick={() =>
+                                updateAttendance(
+                                  person.event_id ||
+                                    selectedAttendanceEvent,
+                                  person.professional_id,
+                                  "present"
+                                )
+                              }
+                            >
+                              ✓ Present
+                            </button>
+
+                            <button
+                              type="button"
+                              onClick={() =>
+                                updateAttendance(
+                                  person.event_id ||
+                                    selectedAttendanceEvent,
+                                  person.professional_id,
+                                  "absent"
+                                )
+                              }
+                            >
+                              ✕ Absent
+                            </button>
+
+                          </div>
+
+                        </div>
+                      ))}
+
+                    </div>
+                  )}
+
+                </div>
+              )}
+
+            </section>
+          )}
 
           {/* ================= PAYMENTS ================= */}
 
@@ -2427,5 +3384,5 @@ const updateAttendance = async (eventId, professionalId, status) => {
     </div>
   );
 }
-
 export default OrganizerDashboard;
+
