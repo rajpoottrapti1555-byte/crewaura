@@ -11,6 +11,8 @@ import connectionRoutes from "./routes/connectionRoutes.js";
 import messageRoutes from "./routes/messageRoutes.js";
 import profileRoutes from "./routes/profileRoutes.js";
 import conversationRoutes from "./routes/conversationRoutes.js";
+import paymentRoutes from "./routes/paymentRoutes.js";
+import faceRoutes from "./routes/faceRoutes.js";
 
 dotenv.config();
 
@@ -22,10 +24,6 @@ const app = express();
 
 app.use(cors());
 app.use(express.json());
-
-/* =========================================================
-   PROFILE TEST ROUTE
-========================================================= */
 
 /* =========================================================
    PROFILE
@@ -62,7 +60,7 @@ app.use("/api/organizers", OrganizerRoutes);
 ========================================================= */
 
 app.use("/api/professionals", professionalRoutes);
-app.use("/api/profile", profileRoutes);
+
 /* =========================================================
    CONNECTIONS
 ========================================================= */
@@ -74,7 +72,26 @@ app.use("/api/connections", connectionRoutes);
 ========================================================= */
 
 app.use("/api/messages", messageRoutes);
+
+/* =========================================================
+   CONVERSATIONS
+========================================================= */
+
 app.use("/api/conversations", conversationRoutes);
+
+/* =========================================================
+   PAYMENTS
+========================================================= */
+
+app.use("/api/payments", paymentRoutes);
+
+/* =========================================================
+   FACE RECOGNITION
+========================================================= */
+
+app.use("/api/faces", faceRoutes);
+
+console.log("FACE ROUTES LOADED");
 
 /* =========================================================
    HOME

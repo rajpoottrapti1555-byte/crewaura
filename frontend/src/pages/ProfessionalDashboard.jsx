@@ -53,6 +53,12 @@ function ProfessionalDashboard() {
   const BACKEND_URL = "http://localhost:5500";
 
   // =========================================================
+  // FACE RECOGNITION SERVICE URL
+  // =========================================================
+
+  const FACE_SERVICE_URL = "http://localhost:5001";
+
+  // =========================================================
   // GET EVENT ID
   // =========================================================
 
@@ -124,6 +130,7 @@ function ProfessionalDashboard() {
 
           if (response.ok) {
             const data = await response.json();
+
             setConnections(
               Array.isArray(data) ? data : []
             );
@@ -848,7 +855,7 @@ function ProfessionalDashboard() {
   };
 
   // =========================================================
-  // GPS ATTENDANCE
+  // GPS + FACE RECOGNITION ATTENDANCE
   // =========================================================
 
   const handleAttendance = async (event) => {
@@ -869,6 +876,11 @@ function ProfessionalDashboard() {
       return;
     }
 
+    if (!userId) {
+      alert("Professional ID is missing.");
+      return;
+    }
+
     if (!navigator.geolocation) {
       alert(
         "Geolocation is not supported by your browser."
@@ -884,11 +896,29 @@ function ProfessionalDashboard() {
     navigator.geolocation.getCurrentPosition(
       async (position) => {
         try {
+          // ===================================================
+          // STEP 1: GET CURRENT LOCATION
+          // ===================================================
+
           const latitude =
             position.coords.latitude;
 
           const longitude =
             position.coords.longitude;
+
+          console.log(
+            "User Latitude:",
+            latitude
+          );
+
+          console.log(
+            "User Longitude:",
+            longitude
+          );
+
+          // ===================================================
+          // STEP 2: GET EVENT LOCATION
+          // ===================================================
 
           const eventLatitude =
             Number(event.latitude);
@@ -909,6 +939,20 @@ function ProfessionalDashboard() {
             );
             return;
           }
+
+          console.log(
+            "Event Latitude:",
+            eventLatitude
+          );
+
+          console.log(
+            "Event Longitude:",
+            eventLongitude
+          );
+
+          // ===================================================
+          // STEP 3: CALCULATE DISTANCE
+          // ===================================================
 
           const toRadians = (value) =>
             (value * Math.PI) / 180;
@@ -949,29 +993,14 @@ function ProfessionalDashboard() {
           const distance = R * c;
 
           console.log(
-            "User Latitude:",
-            latitude
+            "Distance from event:",
+            distance,
+            "meters"
           );
 
-          console.log(
-            "User Longitude:",
-            longitude
-          );
-
-          console.log(
-            "Event Latitude:",
-            eventLatitude
-          );
-
-          console.log(
-            "Event Longitude:",
-            eventLongitude
-          );
-
-          console.log(
-            "Distance:",
-            distance
-          );
+          // ===================================================
+          // STEP 4: LOCATION VERIFICATION
+          // ===================================================
 
           if (distance > 200) {
             alert(
@@ -982,6 +1011,76 @@ function ProfessionalDashboard() {
 
             return;
           }
+
+          console.log(
+            "Location verified successfully."
+          );
+
+          alert(
+            "Location verified. Face verification will now start."
+          );
+
+          // ===================================================
+          // STEP 5: FACE VERIFICATION
+          // ===================================================
+
+          console.log(
+            "Starting face verification for Professional:",
+            userId
+          );
+
+          let faceResponse;
+
+          try {
+            faceResponse = await fetch(
+              `${FACE_SERVICE_URL}/verify-face/${userId}`
+            );
+          } catch (faceError) {
+            console.error(
+              "Face service connection error:",
+              faceError
+            );
+
+            alert(
+              "Face Recognition Service is not running. Please start face_service.py first."
+            );
+
+            return;
+          }
+
+          const faceData =
+            await faceResponse.json();
+
+          console.log(
+            "Face Verification Response:",
+            faceData
+          );
+
+          // ===================================================
+          // STEP 6: CHECK FACE RESULT
+          // ===================================================
+
+          if (
+            !faceResponse.ok ||
+            !faceData.verified ||
+            Number(
+              faceData.professional_id
+            ) !== Number(userId)
+          ) {
+            alert(
+              "Face verification failed. Attendance was not marked."
+            );
+
+            return;
+          }
+
+          console.log(
+            "Face verified successfully."
+          );
+
+          // ===================================================
+          // STEP 7: MARK ATTENDANCE IN MYSQL
+          // ===================================================
 
           const response =
             await fetch(
@@ -994,7 +1093,7 @@ function ProfessionalDashboard() {
                 },
                 body: JSON.stringify({
                   professional_id:
-                    userId,
+                    Number(userId),
                   latitude,
                   longitude,
                 }),
@@ -1004,16 +1103,26 @@ function ProfessionalDashboard() {
           const data =
             await response.json();
 
+          console.log(
+            "Attendance API Response:",
+            data
+          );
+
           if (!response.ok) {
             alert(
               data.message ||
                 "Unable to mark attendance."
             );
+
             return;
           }
 
+          // ===================================================
+          // STEP 8: ATTENDANCE SUCCESS
+          // ===================================================
+
           alert(
-            "Attendance marked successfully!"
+            "Face verified and attendance marked successfully!"
           );
 
           setAttendanceStatus(
@@ -1022,6 +1131,10 @@ function ProfessionalDashboard() {
               [eventId]: "present",
             })
           );
+
+          // ===================================================
+          // STEP 9: REFRESH MY EVENTS
+          // ===================================================
 
           const assignedResponse =
             await fetch(
@@ -1039,6 +1152,34 @@ function ProfessionalDashboard() {
                 ? assignedData
                 : []
             );
+
+            const attendanceMap = {};
+
+            assignedData.forEach(
+              (assignedEvent) => {
+                const assignedEventId =
+                  getEventId(
+                    assignedEvent
+                  );
+
+                if (
+                  assignedEvent.attendance_status ===
+                    "present" &&
+                  assignedEventId
+                ) {
+                  attendanceMap[
+                    assignedEventId
+                  ] = "present";
+                }
+              }
+            );
+
+            setAttendanceStatus(
+              (previous) => ({
+                ...previous,
+                ...attendanceMap,
+              })
+            );
           }
         } catch (error) {
           console.error(
@@ -1047,7 +1188,7 @@ function ProfessionalDashboard() {
           );
 
           alert(
-            "Unable to mark attendance."
+            "Unable to complete attendance verification."
           );
         } finally {
           setAttendanceLoading(
@@ -2886,7 +3027,7 @@ function ProfessionalDashboard() {
                           {attendanceLoading[
                             eventId
                           ]
-                            ? "Checking Location..."
+                            ? "Verifying Location & Face..."
                             : "Mark Present"}
                         </button>
                       )}

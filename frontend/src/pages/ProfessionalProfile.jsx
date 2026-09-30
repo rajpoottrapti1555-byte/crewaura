@@ -1,4 +1,6 @@
+
 import { useEffect, useState } from "react";
+import FaceRegistration from "../components/FaceRegistration";
 
 function ProfessionalProfile() {
   const [userId, setUserId] = useState("");
@@ -590,6 +592,27 @@ function ProfessionalProfile() {
           </div>
 
         </ProfileCard>
+        {/* FACE REGISTRATION */}
+
+<ProfileCard
+  title="Face Recognition"
+  icon="📷"
+>
+  <div
+    style={{
+      gridColumn: "1 / -1",
+    }}
+  >
+    <FaceRegistration
+      userId={userId}
+      onRegistered={() => {
+        setMessage(
+          "Face registration completed successfully!"
+        );
+      }}
+    />
+  </div>
+</ProfileCard>
 
       </div>
     );
