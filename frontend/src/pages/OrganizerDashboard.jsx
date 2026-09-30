@@ -1,4 +1,3 @@
-
 import { useEffect, useState } from "react";
 import "./OrganizerDashboard.css";
 
@@ -109,7 +108,7 @@ function OrganizerDashboard() {
 
   /* =========================================================
      CONNECTIONS
-     ========================================================= */
+  ========================================================= */
 
   const handleConnect = async (receiverId, receiverName) => {
     try {
@@ -211,7 +210,7 @@ function OrganizerDashboard() {
 
   /* =========================================================
      VIEW PROFILE
-     ========================================================= */
+  ========================================================= */
 
   const handleViewProfile = async (userId) => {
     try {
@@ -220,8 +219,6 @@ function OrganizerDashboard() {
       );
 
       const data = await response.json();
-
-      console.log("Professional Profile:", data);
 
       if (response.ok) {
         setSelectedProfile(data);
@@ -236,7 +233,7 @@ function OrganizerDashboard() {
 
   /* =========================================================
      EVENTS
-     ========================================================= */
+  ========================================================= */
 
   const fetchEvents = async () => {
     if (!user?.id) {
@@ -303,10 +300,6 @@ function OrganizerDashboard() {
       setMessage("Unable to connect to server");
     }
   };
-
-
-
-
 
   const fetchConnectionRequests = async () => {
     try {
@@ -435,7 +428,7 @@ function OrganizerDashboard() {
 
   /* =========================================================
      ORGANIZER PROFILE
-     ========================================================= */
+  ========================================================= */
 
   const fetchOrganizerProfile = async () => {
     if (!user?.id) {
@@ -448,8 +441,6 @@ function OrganizerDashboard() {
       );
 
       const data = await response.json();
-
-      console.log("Organizer Profile:", data);
 
       if (response.ok) {
         setOrganizerProfile(data);
@@ -475,7 +466,7 @@ function OrganizerDashboard() {
 
   /* =========================================================
      CHAT - LOAD MESSAGES
-     ========================================================= */
+  ========================================================= */
 
   useEffect(() => {
     if (!selectedChat || !user?.id) {
@@ -543,7 +534,7 @@ function OrganizerDashboard() {
 
   /* =========================================================
      CHAT - SEND MESSAGE
-     ========================================================= */
+  ========================================================= */
 
   const handleSendMessage = async (e) => {
     e.preventDefault();
@@ -625,13 +616,13 @@ function OrganizerDashboard() {
       setMessageText("");
     } catch (error) {
       console.error("Send Message Error:", error);
-      alert(error.message);
+      setMessage(error.message || "Unable to send message");
     }
   };
 
   /* =========================================================
      CREATE EVENT
-     ========================================================= */
+  ========================================================= */
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -689,73 +680,69 @@ function OrganizerDashboard() {
 
             const data = await response.json();
 
-            if (response.ok) {
-                            console.log("Event created successfully:", data);
+            if (!response.ok) {
+              setMessage(
+                data.message || "Unable to create event."
+              );
+              return;
+            }
 
-              // Get newly created event ID
-              const eventId =
-                data.event?.id ||
-                data.event?.event_id ||
-                data.id ||
-                data.event_id;
+            console.log("Event created successfully:", data);
 
-              if (!eventId) {
-                console.error("Event ID not found in response:", data);
+            const eventId =
+              data.event?.id ||
+              data.event?.event_id ||
+              data.id ||
+              data.event_id;
 
-                setMessage(
-                  "Event created, but event ID was not received."
-                );
+            if (!eventId) {
+              console.error(
+                "Event ID not found in response:",
+                data
+              );
 
-                fetchEvents();
-                return;
-              }
+              setMessage(
+                "Event created, but event ID was not received."
+              );
 
-              console.log("Created Event ID:", eventId);
+              fetchEvents();
+              return;
+            }
 
-              // ==========================================
-              // SEND EVENT REQUEST TO SELECTED PROFESSIONALS
-              // ==========================================
+            console.log("Created Event ID:", eventId);
 
-              if (
-                selectedProfessionals &&
-                selectedProfessionals.length > 0
-              ) {
-                console.log(
-                  "Sending requests to:",
-                  selectedProfessionals
-                );
-
-                const requestResults = await Promise.all(
-                  selectedProfessionals.map(async (professionalId) => {
+            if (
+              selectedProfessionals &&
+              selectedProfessionals.length > 0
+            ) {
+              const requestResults = await Promise.all(
+                selectedProfessionals.map(
+                  async (professionalId) => {
                     try {
                       const requestResponse = await fetch(
                         `http://localhost:5500/api/events/${eventId}/request-professional`,
                         {
                           method: "POST",
                           headers: {
-                            "Content-Type": "application/json",
+                            "Content-Type":
+                              "application/json"
                           },
                           body: JSON.stringify({
                             organizer_id: user.id,
                             professional_id: professionalId,
                             message:
-                              "You have received an event request.",
-                          }),
+                              "You have received an event request."
+                          })
                         }
                       );
 
                       const requestData =
                         await requestResponse.json();
 
-                      console.log(
-                        `Request result for professional ${professionalId}:`,
-                        requestData
-                      );
-
                       return {
                         professionalId,
                         success: requestResponse.ok,
-                        data: requestData,
+                        data: requestData
                       };
                     } catch (error) {
                       console.error(
@@ -765,65 +752,52 @@ function OrganizerDashboard() {
 
                       return {
                         professionalId,
-                        success: false,
+                        success: false
                       };
                     }
-                  })
+                  }
+                )
+              );
+
+              const failedRequests =
+                requestResults.filter(
+                  (result) => !result.success
                 );
 
-                console.log(
-                  "All event request results:",
-                  requestResults
+              if (failedRequests.length === 0) {
+                setMessage(
+                  "Event created successfully. Requests sent to all selected professionals."
                 );
-
-                const failedRequests =
-                  requestResults.filter(
-                    (result) => !result.success
-                  );
-
-                if (failedRequests.length === 0) {
-                  setMessage(
-                    "Event created successfully. Requests sent to all selected professionals."
-                  );
-                } else {
-                  setMessage(
-                    `Event created. ${
-                      requestResults.length - failedRequests.length
-                    } requests sent successfully, ${
-                      failedRequests.length
-                    } failed.`
-                  );
-                }
               } else {
                 setMessage(
-                  "Event created successfully. No professionals were selected."
+                  `Event created. ${
+                    requestResults.length -
+                    failedRequests.length
+                  } requests sent successfully, ${
+                    failedRequests.length
+                  } failed.`
                 );
               }
-
-              // Reset form after successful event creation
-              setFormData({
-                title: "",
-                description: "",
-                location: "",
-                latitude: "",
-                longitude: "",
-                event_date: "",
-                start_time: "",
-                end_time: ""
-              });
-
-              // Refresh organizer events
-              fetchEvents();
-              fetchEvents();
-            
-              // Clear selected professionals
-              setSelectedProfessionals([]);
             } else {
               setMessage(
-                data.message || "Unable to create event."
+                "Event created successfully. No professionals were selected."
               );
-            
             }
+
+            setFormData({
+              title: "",
+              description: "",
+              location: "",
+              latitude: "",
+              longitude: "",
+              event_date: "",
+              start_time: "",
+              end_time: ""
+            });
+
+            setSelectedProfessionals([]);
+
+            fetchEvents();
           } catch (error) {
             console.error("Create Event Error:", error);
             setMessage("Unable to create event.");
@@ -857,75 +831,10 @@ function OrganizerDashboard() {
       setMessage("Something went wrong.");
     }
   };
-  
-  const fetchMessages = async (eventId, otherUserId) => {
-    try {
-      if (!eventId || !otherUserId || !user?.id) return;
-  
-      const response = await fetch(
-        `http://localhost:5500/api/messages/${eventId}/${user.id}/${otherUserId}`
-      );
-  
-      const data = await response.json();
-  
-      if (response.ok) {
-        setMessages(data);
-      } else {
-        setMessage(data.message || "Unable to load messages");
-      }
-    } catch (error) {
-      console.error("Fetch Messages Error:", error);
-      setMessage("Unable to connect to server");
-    }
-  };
-  const handleSendMessage = async (e) => {
-    e.preventDefault();
-  
-    if (!messageText.trim()) return;
-  
-    if (!selectedChatEvent || !selectedChat || !user?.id) {
-      setMessage("Please select an event and professional");
-      return;
-    }
-  
-    try {
-      const response = await fetch(
-        "http://localhost:5500/api/messages",
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            event_id: selectedChatEvent.id,
-            sender_id: user.id,
-            receiver_id: selectedChat.id,
-            message: messageText.trim(),
-          }),
-        }
-      );
-  
-      const data = await response.json();
-  
-      if (response.ok) {
-        setMessageText("");
-  
-        await fetchMessages(
-          selectedChatEvent.id,
-          selectedChat.id
-        );
-      } else {
-        setMessage(data.message || "Unable to send message");
-      }
-    } catch (error) {
-      console.error("Send Message Error:", error);
-      setMessage("Unable to connect to server");
-    }
-  };
 
   /* =========================================================
      PROFILE EDIT
-     ========================================================= */
+  ========================================================= */
 
   const startEditingProfile = () => {
     const profile = organizerProfile?.profile || {};
@@ -973,7 +882,8 @@ function OrganizerDashboard() {
           },
           body: JSON.stringify({
             user_id: Number(user.id),
-            organization_name: profileForm.organization_name,
+            organization_name:
+              profileForm.organization_name,
             phone: profileForm.phone,
             city: profileForm.city,
             address: profileForm.address,
@@ -1006,7 +916,7 @@ function OrganizerDashboard() {
 
   /* =========================================================
      EVENT STATUS
-     ========================================================= */
+  ========================================================= */
 
   const getEventStatus = (event) => {
     const now = new Date();
@@ -1097,7 +1007,9 @@ function OrganizerDashboard() {
             <span className="nav-label">My Events</span>
           </button>
 
-          <div className="crew-menu-title">Connections</div>
+          <div className="crew-menu-title">
+            Connections
+          </div>
 
           <button
             className={`crew-nav-item ${
@@ -1187,8 +1099,6 @@ function OrganizerDashboard() {
 
         </nav>
 
-        {/* Organizer profile at bottom */}
-
         <div className="crew-profile">
 
           <button
@@ -1251,7 +1161,6 @@ function OrganizerDashboard() {
                   {unreadCount}
                 </span>
               )}
-
             </button>
 
             {notificationsOpen && (
@@ -1314,6 +1223,7 @@ function OrganizerDashboard() {
 
                 <div className="crew-stat-card">
                   <div className="crew-stat-icon">▤</div>
+
                   <div>
                     <span>Total Events</span>
                     <strong>{events.length}</strong>
@@ -1322,6 +1232,7 @@ function OrganizerDashboard() {
 
                 <div className="crew-stat-card">
                   <div className="crew-stat-icon">♧</div>
+
                   <div>
                     <span>Connected People</span>
                     <strong>{connections.length}</strong>
@@ -1330,13 +1241,16 @@ function OrganizerDashboard() {
 
                 <div className="crew-stat-card">
                   <div className="crew-stat-icon">◉</div>
+
                   <div>
                     <span>Active Events</span>
+
                     <strong>
                       {
                         events.filter(
                           (event) =>
-                            getEventStatus(event) === "Ongoing"
+                            getEventStatus(event) ===
+                            "Ongoing"
                         ).length
                       }
                     </strong>
@@ -1345,6 +1259,7 @@ function OrganizerDashboard() {
 
                 <div className="crew-stat-card">
                   <div className="crew-stat-icon">₹</div>
+
                   <div>
                     <span>Total Budget</span>
                     <strong>₹8.4L</strong>
@@ -1359,7 +1274,9 @@ function OrganizerDashboard() {
 
                 <button
                   className="crew-primary-button"
-                  onClick={() => showSection("createEvent")}
+                  onClick={() =>
+                    showSection("createEvent")
+                  }
                 >
                   + Create Event
                 </button>
@@ -1378,13 +1295,17 @@ function OrganizerDashboard() {
 
                   <div className="event-info">
                     <span>📍 Bhopal</span>
-                    <span>📅 28 September 2026</span>
+                    <span>
+                      📅 28 September 2026
+                    </span>
                     <span>👥 85 Workers</span>
                   </div>
 
                   <button
                     className="crew-outline-button"
-                    onClick={() => showSection("events")}
+                    onClick={() =>
+                      showSection("events")
+                    }
                   >
                     View Event
                   </button>
@@ -1401,13 +1322,17 @@ function OrganizerDashboard() {
 
                   <div className="event-info">
                     <span>📍 Indore</span>
-                    <span>📅 30 September 2026</span>
+                    <span>
+                      📅 30 September 2026
+                    </span>
                     <span>👥 52 Workers</span>
                   </div>
 
                   <button
                     className="crew-outline-button"
-                    onClick={() => showSection("events")}
+                    onClick={() =>
+                      showSection("events")
+                    }
                   >
                     View Event
                   </button>
@@ -1420,17 +1345,23 @@ function OrganizerDashboard() {
                     Active
                   </div>
 
-                  <h3>Corporate Leadership Meet</h3>
+                  <h3>
+                    Corporate Leadership Meet
+                  </h3>
 
                   <div className="event-info">
                     <span>📍 Bhopal</span>
-                    <span>📅 05 October 2026</span>
+                    <span>
+                      📅 05 October 2026
+                    </span>
                     <span>👥 40 Workers</span>
                   </div>
 
                   <button
                     className="crew-outline-button"
-                    onClick={() => showSection("events")}
+                    onClick={() =>
+                      showSection("events")
+                    }
                   >
                     View Event
                   </button>
@@ -1450,7 +1381,6 @@ function OrganizerDashboard() {
               <div className="organizer-profile-header">
 
                 <div>
-
                   <span className="profile-page-label">
                     ORGANIZER ACCOUNT
                   </span>
@@ -1461,7 +1391,6 @@ function OrganizerDashboard() {
                     Manage your organizer information and
                     profile details.
                   </p>
-
                 </div>
 
                 {!isEditingProfile && (
@@ -1484,18 +1413,24 @@ function OrganizerDashboard() {
 
                   <div className="profile-edit-heading">
                     <span>EDIT PROFILE</span>
-                    <h2>Update Organizer Information</h2>
+                    <h2>
+                      Update Organizer Information
+                    </h2>
                   </div>
 
                   <div className="crew-form-grid">
 
                     <div className="crew-form-group">
-                      <label>Organization Name</label>
+                      <label>
+                        Organization Name
+                      </label>
 
                       <input
                         type="text"
                         name="organization_name"
-                        value={profileForm.organization_name}
+                        value={
+                          profileForm.organization_name
+                        }
                         onChange={handleProfileChange}
                         placeholder="Enter organization name"
                       />
@@ -1550,12 +1485,16 @@ function OrganizerDashboard() {
                     </div>
 
                     <div className="crew-form-group crew-full-width">
-                      <label>Profile Photo URL</label>
+                      <label>
+                        Profile Photo URL
+                      </label>
 
                       <input
                         type="text"
                         name="profile_photo"
-                        value={profileForm.profile_photo}
+                        value={
+                          profileForm.profile_photo
+                        }
                         onChange={handleProfileChange}
                         placeholder="Paste profile photo URL"
                       />
@@ -1574,7 +1513,9 @@ function OrganizerDashboard() {
                         <div className="crew-profile-photo-preview">
 
                           <img
-                            src={profileForm.profile_photo}
+                            src={
+                              profileForm.profile_photo
+                            }
                             alt="Profile Preview"
                             className="crew-large-profile-photo"
                             onError={(e) => {
@@ -1642,13 +1583,17 @@ function OrganizerDashboard() {
                           {organizerProfile?.user?.name
                             ? organizerProfile.user.name
                                 .split(" ")
-                                .map((word) => word[0])
+                                .map(
+                                  (word) => word[0]
+                                )
                                 .join("")
                                 .toUpperCase()
                             : user?.name
                               ? user.name
                                   .split(" ")
-                                  .map((word) => word[0])
+                                  .map(
+                                    (word) => word[0]
+                                  )
                                   .join("")
                                   .toUpperCase()
                               : "OR"}
@@ -1688,7 +1633,6 @@ function OrganizerDashboard() {
                   <div className="organizer-profile-details-grid">
 
                     <div className="organizer-detail-card">
-
                       <div className="organizer-detail-icon">
                         📞
                       </div>
@@ -1697,15 +1641,13 @@ function OrganizerDashboard() {
                         <span>Phone Number</span>
 
                         <strong>
-                          {organizerProfile?.profile?.phone ||
-                            "Not added"}
+                          {organizerProfile?.profile
+                            ?.phone || "Not added"}
                         </strong>
                       </div>
-
                     </div>
 
                     <div className="organizer-detail-card">
-
                       <div className="organizer-detail-icon">
                         ✉
                       </div>
@@ -1719,11 +1661,9 @@ function OrganizerDashboard() {
                             "Not added"}
                         </strong>
                       </div>
-
                     </div>
 
                     <div className="organizer-detail-card">
-
                       <div className="organizer-detail-icon">
                         🏢
                       </div>
@@ -1737,11 +1677,9 @@ function OrganizerDashboard() {
                             "Not added"}
                         </strong>
                       </div>
-
                     </div>
 
                     <div className="organizer-detail-card">
-
                       <div className="organizer-detail-icon">
                         📍
                       </div>
@@ -1754,7 +1692,6 @@ function OrganizerDashboard() {
                             "Not added"}
                         </strong>
                       </div>
-
                     </div>
 
                   </div>
@@ -1768,14 +1705,18 @@ function OrganizerDashboard() {
                       </span>
 
                       <div>
-                        <span>Organization Address</span>
+                        <span>
+                          Organization Address
+                        </span>
+
                         <h3>Address</h3>
                       </div>
 
                     </div>
 
                     <p>
-                      {organizerProfile?.profile?.address ||
+                      {organizerProfile?.profile
+                        ?.address ||
                         "No address has been added yet."}
                     </p>
 
@@ -1790,7 +1731,10 @@ function OrganizerDashboard() {
                       </span>
 
                       <div>
-                        <span>About Organization</span>
+                        <span>
+                          About Organization
+                        </span>
+
                         <h3>About Us</h3>
                       </div>
 
@@ -1843,6 +1787,7 @@ function OrganizerDashboard() {
                         <option value="">
                           Select Event Type
                         </option>
+
                         <option>Conference</option>
                         <option>Exhibition</option>
                         <option>Wedding</option>
@@ -2069,9 +2014,6 @@ function OrganizerDashboard() {
 
                       <div className="event-info">
 
-<<<<<<< HEAD
-               
-=======
                         <span>
                           📍{" "}
                           {event.location ||
@@ -2110,8 +2052,13 @@ function OrganizerDashboard() {
                       <button
                         className="crew-primary-button"
                         onClick={() => {
-                          fetchEventProfessionals(event.id);
-                          fetchEventAttendance(event.id);
+                          fetchEventProfessionals(
+                            event.id
+                          );
+
+                          fetchEventAttendance(
+                            event.id
+                          );
                         }}
                       >
                         View Team & Attendance
@@ -2141,7 +2088,6 @@ function OrganizerDashboard() {
                   </p>
                 </div>
 
->>>>>>> c384781 (Update EventSaathi project)
               </div>
 
               {organizers.length === 0 ? (
@@ -2167,13 +2113,17 @@ function OrganizerDashboard() {
                     >
 
                       <div className="crew-person-avatar">
+
                         {organizer.name
                           ? organizer.name
                               .split(" ")
-                              .map((word) => word[0])
+                              .map(
+                                (word) => word[0]
+                              )
                               .join("")
                               .toUpperCase()
                           : "OR"}
+
                       </div>
 
                       <h3>{organizer.name}</h3>
@@ -2231,8 +2181,8 @@ function OrganizerDashboard() {
                   <h3>No professionals found</h3>
 
                   <p>
-                    Registered professionals will appear
-                    here.
+                    Registered professionals will
+                    appear here.
                   </p>
 
                 </div>
@@ -2250,7 +2200,9 @@ function OrganizerDashboard() {
                         {professional.name
                           ? professional.name
                               .split(" ")
-                              .map((word) => word[0])
+                              .map(
+                                (word) => word[0]
+                              )
                               .join("")
                               .toUpperCase()
                           : "PR"}
@@ -2378,32 +2330,6 @@ function OrganizerDashboard() {
 
                     <div className="crew-service-list">
 
-<<<<<<< HEAD
-      return (
-        <button
-          key={person.professional_id}
-          type="button"
-          className={
-            selectedChat?.id === person.professional_id
-              ? "crew-chat-person active"
-              : "crew-chat-person"
-          }
-          onClick={() => {
-            setSelectedChat({
-              id: person.professional_id,
-              name: person.name,
-              role: "Professional",
-              email: person.email,
-              initials: initials
-            });
-          
-            fetchMessages(
-              selectedChatEvent.id,
-              person.professional_id
-            );
-          }}
-        >
-=======
                       {selectedProfile.services.map(
                         (service) => (
                           <span key={service.id}>
@@ -2412,7 +2338,6 @@ function OrganizerDashboard() {
                           </span>
                         )
                       )}
->>>>>>> c384781 (Update EventSaathi project)
 
                     </div>
                   </>
@@ -2468,7 +2393,9 @@ function OrganizerDashboard() {
                         {request.sender_name
                           ? request.sender_name
                               .split(" ")
-                              .map((word) => word[0])
+                              .map(
+                                (word) => word[0]
+                              )
                               .join("")
                               .toUpperCase()
                           : "OR"}
@@ -2572,7 +2499,9 @@ function OrganizerDashboard() {
                         {connection.name
                           ? connection.name
                               .split(" ")
-                              .map((word) => word[0])
+                              .map(
+                                (word) => word[0]
+                              )
                               .join("")
                               .toUpperCase()
                           : "U"}
@@ -2648,7 +2577,6 @@ function OrganizerDashboard() {
                 <div className="crew-event-grid">
 
                   {events.map((event) => {
-
                     const team =
                       eventProfessionals[event.id] || [];
 
@@ -2767,17 +2695,19 @@ function OrganizerDashboard() {
                       <h4>My Connections</h4>
 
                       {connections.map((connection) => {
-
                         const otherUserId =
                           Number(connection.user_id);
 
                         const otherUserName =
-                          connection.name || "Organizer";
+                          connection.name ||
+                          "Organizer";
 
                         const initials =
                           otherUserName
                             .split(" ")
-                            .map((word) => word[0])
+                            .map(
+                              (word) => word[0]
+                            )
                             .join("")
                             .slice(0, 2)
                             .toUpperCase();
@@ -2794,9 +2724,7 @@ function OrganizerDashboard() {
                                 : "crew-chat-person"
                             }
                             onClick={async () => {
-
                               try {
-
                                 const response =
                                   await fetch(
                                     "http://localhost:5500/api/conversations/personal",
@@ -2838,24 +2766,20 @@ function OrganizerDashboard() {
                                 );
 
                                 setChatType("personal");
-
                                 setSelectedChatEvent(null);
-
                                 setMessages([]);
-
                                 setMessageText("");
-
                               } catch (error) {
-
                                 console.error(
                                   "Open Personal Chat Error:",
                                   error
                                 );
 
-                                alert(error.message);
-
+                                setMessage(
+                                  error.message ||
+                                    "Unable to open chat"
+                                );
                               }
-
                             }}
                           >
 
@@ -2888,7 +2812,6 @@ function OrganizerDashboard() {
                   <select
                     value={selectedChatEvent?.id || ""}
                     onChange={(e) => {
-
                       const selectedEvent =
                         events.find(
                           (item) =>
@@ -2905,7 +2828,6 @@ function OrganizerDashboard() {
                       setChatType("professional");
                       setMessages([]);
                       setMessageText("");
-
                     }}
                   >
 
@@ -2930,11 +2852,9 @@ function OrganizerDashboard() {
                   eventProfessionals[
                     selectedChatEvent.id
                   ]?.length > 0 ? (
-
                     eventProfessionals[
                       selectedChatEvent.id
                     ].map((person) => {
-
                       const initials =
                         person.name
                           ? person.name
@@ -2960,7 +2880,6 @@ function OrganizerDashboard() {
                               : "crew-chat-person"
                           }
                           onClick={() => {
-
                             setSelectedChat({
                               id: person.professional_id,
                               name: person.name,
@@ -2969,11 +2888,16 @@ function OrganizerDashboard() {
                               initials
                             });
 
-                            setSelectedConversationId(null);
-                            setChatType("professional");
+                            setSelectedConversationId(
+                              null
+                            );
+
+                            setChatType(
+                              "professional"
+                            );
+
                             setMessages([]);
                             setMessageText("");
-
                           }}
                         >
 
@@ -2996,7 +2920,6 @@ function OrganizerDashboard() {
                         </button>
                       );
                     })
-
                   ) : (
                     <div className="crew-chat-no-people">
 
@@ -3016,7 +2939,6 @@ function OrganizerDashboard() {
                 <div className="crew-chat-window">
 
                   {!selectedChat ? (
-
                     <div className="crew-chat-empty">
 
                       <div className="crew-empty-icon">
@@ -3033,9 +2955,7 @@ function OrganizerDashboard() {
                       </p>
 
                     </div>
-
                   ) : (
-
                     <>
 
                       <div className="crew-chat-header">
@@ -3061,7 +2981,6 @@ function OrganizerDashboard() {
                       <div className="crew-chat-messages">
 
                         {messages.length === 0 ? (
-
                           <div className="crew-no-messages">
 
                             <span>
@@ -3077,11 +2996,8 @@ function OrganizerDashboard() {
                             </p>
 
                           </div>
-
                         ) : (
-
                           messages.map((msg) => {
-
                             const currentUserId =
                               Number(user?.id);
 
@@ -3116,7 +3032,6 @@ function OrganizerDashboard() {
                               </div>
                             );
                           })
-
                         )}
 
                       </div>
@@ -3144,7 +3059,6 @@ function OrganizerDashboard() {
                       </form>
 
                     </>
-
                   )}
 
                 </div>
@@ -3188,7 +3102,9 @@ function OrganizerDashboard() {
                       <button
                         className="crew-primary-button"
                         onClick={() =>
-                          fetchEventAttendance(event.id)
+                          fetchEventAttendance(
+                            event.id
+                          )
                         }
                       >
                         View Attendance
@@ -3384,5 +3300,5 @@ function OrganizerDashboard() {
     </div>
   );
 }
-export default OrganizerDashboard;
 
+export default OrganizerDashboard;
